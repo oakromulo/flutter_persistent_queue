@@ -11,3 +11,7 @@ ios/Runner/GeneratedPluginRegistrant.*
 
 # left out of source control on library packages
 pubspec.lock
+
+# locally-instantiated
+.flutter-plugins
+android/local.properties
