@@ -35,10 +35,9 @@ very reduced resource usage, as it doesn't require serializing and deserializing
 contiguous or chunked [`dart:collections`](
 https://pub.dartlang.org/documentation/collection/latest/) to the filesystem.
 
-It's build on top of the also minimalistic [Localstorage](
-https://github.com/lesnitsky/flutter_localstorage) library.
-
-Concurrency-safety and sequential correctness is made possible by the fantastic
+It's built on top of the also minimalistic [Localstorage](
+https://github.com/lesnitsky/flutter_localstorage) library. Concurrency-safety
+and sequential correctness is provided by the fantastic and easy to use
 [Synchronized](https://github.com/tekartik/synchronized.dart) reentrant locks.
 
 
