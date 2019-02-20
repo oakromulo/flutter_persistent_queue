@@ -1,5 +1,6 @@
 .DS_Store
 .dart_tool/
+.idea
 
 .packages
 .pub/
@@ -11,8 +12,7 @@ ios/Runner/GeneratedPluginRegistrant.*
 android/local.properties
 android/app/src/main/java/io/flutter/plugins/Generated*
 
-# left out of source control on library packages
+packages
 pubspec.lock
-
-# locally-instantiated
 .flutter-plugins
+doc/api/
