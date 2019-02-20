@@ -2,6 +2,7 @@
 
 Simple file-based non-volatile queue library for flutter.
 
+
 ## Installation
 
 Add dependency to `pubspec.yaml`:
@@ -38,7 +39,8 @@ It's build on top of the also minimalistic [Localstorage](
 https://github.com/lesnitsky/flutter_localstorage) library.
 
 Concurrency-safety and sequential correctness is made possible by the fantastic
-reentrant locks from the https://github.com/tekartik/synchronized.dart package.
+[Synchronized](https://github.com/tekartik/synchronized.dart) reentrant locks.
+
 
 ## License
 
