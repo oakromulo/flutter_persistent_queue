@@ -8,10 +8,11 @@ build/
 ios/.generated/
 ios/Flutter/Generated.xcconfig
 ios/Runner/GeneratedPluginRegistrant.*
+android/local.properties
+android/app/src/main/java/io/flutter/plugins/Generated*
 
 # left out of source control on library packages
 pubspec.lock
 
 # locally-instantiated
 .flutter-plugins
-android/local.properties
