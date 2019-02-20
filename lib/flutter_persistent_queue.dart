@@ -5,7 +5,7 @@
 /// [Localstorage](https://github.com/lesnitsky/flutter_localstorage). The main
 /// focus is to provide functionality for small yet fast disk-based queues (less
 /// than ~10k JSON encodable items).
-/// 
+///
 /// p.s. not a [`dart:collection`](
 /// https://pub.dartlang.org/documentation/collection/latest/)
 library flutter_persistent_queue;
@@ -36,16 +36,16 @@ typedef _VoidAsyncFunc = Future<void> Function();
 /// analytics events and their respective [Map<String, dynamic>] JSON payloads.
 class PersistentQueue {
   /// Creates a new [PersistentQueue], to be used after [PersistentQueue.setup].
-  /// 
+  ///
   /// A [filename], not a `filepath`, is the only required parameter. The actual
   /// storage destination is currently undefined and platform-specific, as per
   /// this [issue](
   /// https://github.com/lesnitsky/flutter_localstorage/issues/4).
-  /// 
+  ///
   /// An optional [AsyncFlushFunc] [flushFunc] can be supplied at construction
   /// time, to be called before each [flush()] operation emptying the queue.
-  /// 
-  /// The next two named parameters [flushAt] and [flushTimeout] specify 
+  ///
+  /// The next two named parameters [flushAt] and [flushTimeout] specify
   /// trigger conditions for firing automatic implicit [flush()] operations.
   /// [flushAt] establishes the target cap (not a maximum!) for locally stored
   /// items, with a default of `100`. It's also possible to set a [flushTimeout]
@@ -76,14 +76,14 @@ class PersistentQueue {
   int get length => _len;
 
   /// The current queue status, indicating readiness for [push()].
-  /// 
+  ///
   /// It returns `false` until [setup()] gets completed successfully. Trying to
   /// write items before the queue is ready causes a `PersistQueueNotReady`
   /// [Exception] to be thrown.
   bool get ready => _ready;
 
   /// Restores previously queued elements, if available, from the filesystem.
-  /// 
+  ///
   /// A queue only gets [ready] for write operations after a [setup()] finishes
   /// succesfully after construction. Failing to do so yields a
   /// `PersistQueueNotReady` [Exception].
@@ -95,7 +95,7 @@ class PersistentQueue {
 
   /// Flushes the queue, optionally running an async [flushFunc] over all queued
   /// elements before they get permanently cleared.
-  /// 
+  ///
   /// p.s if an [AsyncFlushFunc] was previously provided at construction time
   /// and the optional [flushFunc] argument is also given then the latter gets
   /// prioritized and called instead.
