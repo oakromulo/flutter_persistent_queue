@@ -17,12 +17,13 @@ Run in your terminal
 ```sh
 flutter packages get
 ```
-
-<!--## Example
+<!--
+## Example
 
 ```dart
 
 ```
--->## License
+-->
+## License
 
 MIT
