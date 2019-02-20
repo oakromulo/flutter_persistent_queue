@@ -8,3 +8,6 @@ build/
 ios/.generated/
 ios/Flutter/Generated.xcconfig
 ios/Runner/GeneratedPluginRegistrant.*
+
+# left out of source control on library packages
+pubspec.lock
