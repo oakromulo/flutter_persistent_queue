@@ -1,14 +1,29 @@
-# flutter_persistent_queue
+# persistent_queue
 
-A new Flutter package project.
+Simple file-based non-volatile queue for flutter.
 
-## Getting Started
+## Installation
 
-This project is a starting point for a Dart
-[package](https://flutter.io/developing-packages/),
-a library module containing code that can be shared easily across
-multiple Flutter or Dart projects.
+Add dependency to `pubspec.yaml`
 
-For help getting started with Flutter, view our 
-[online documentation](https://flutter.io/docs), which offers tutorials, 
-samples, guidance on mobile development, and a full API reference.
+```yaml
+dependencies:
+  ...
+  flutter_persistent_queue: ^0.0.1
+```
+
+Run in your terminal
+
+```sh
+flutter packages get
+```
+
+<!--## Example
+
+```dart
+
+```
+-->
+## License
+
+MIT
