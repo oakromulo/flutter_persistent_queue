@@ -1,10 +1,10 @@
 # persistent_queue
 
-Simple file-based non-volatile queue for flutter.
+Simple file-based non-volatile queue library for flutter.
 
 ## Installation
 
-Add dependency to `pubspec.yaml`
+Add dependency to `pubspec.yaml`:
 
 ```yaml
 dependencies:
@@ -12,7 +12,7 @@ dependencies:
   flutter_persistent_queue: ^0.0.1
 ```
 
-Run in your terminal
+Run in your terminal:
 
 ```sh
 flutter packages get
@@ -24,6 +24,22 @@ flutter packages get
 
 ```
 -->
+
+## How it works
+
+Each JSON-encodable item to be queued goes to its own non-volatile file on the
+flutter-compatible devices. This particular design choice limits potential use
+cases requiring very long queues but otherwise provides high performance with
+very reduced resource usage, as it doesn't require serializing and deserializing
+contiguous or chunked [`dart:collections`](
+https://pub.dartlang.org/documentation/collection/latest/) to the filesystem.
+
+It's build on top of the also minimalistic [Localstorage](
+https://github.com/lesnitsky/flutter_localstorage) library.
+
+Concurrency-safety and sequential correctness is made possible by the fantastic
+reentrant locks from the https://github.com/tekartik/synchronized.dart package.
+
 ## License
 
 MIT
