@@ -101,8 +101,8 @@ class PersistentQueue {
   /// prioritized and called instead.
   Future<void> flush([AsyncFlushFunc flushFunc]) async {
     await _queueIdle(() async {
-      final _asyncFlushFunc = flushFunc ?? _flushFunc;
-      if (_asyncFlushFunc != null) await _asyncFlushFunc(await _toList());
+      final AsyncFlushFunc _func = flushFunc ?? _flushFunc;
+      if (_func != null) await _func(await _toList());
       await _reset();
     });
   }
