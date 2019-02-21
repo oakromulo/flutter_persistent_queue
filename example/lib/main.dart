@@ -22,7 +22,7 @@ Future<void> _assert() async {
   for (int i = 1000; i > 0; --i) {
     final int val = Random().nextInt(4294967296);
     source.add(val);
-    await pq.push(<String, dynamic>{ 'val': val });
+    await pq.push(<String, dynamic>{'val': val});
   }
   print('queue loaded');
 
