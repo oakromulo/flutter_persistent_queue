@@ -87,9 +87,12 @@ class PersistentQueue {
   /// A queue only gets [ready] for write operations after a [setup()] finishes
   /// succesfully after construction. Failing to do so yields a
   /// `PersistQueueNotReady` [Exception].
-  Future<void> setup() async {
+  ///
+  /// The optional parameter [noReload] forces the queue to start fresh instead
+  /// of reloading any past queued elements that persisted on the device.
+  Future<void> setup({bool noReload = false}) async {
     _ready = false;
-    await _reload();
+    noReload != true ? await _reload() : await _reset();
     _ready = true;
   }
 
@@ -101,8 +104,8 @@ class PersistentQueue {
   /// prioritized and called instead.
   Future<void> flush([AsyncFlushFunc flushFunc]) async {
     await _queueIdle(() async {
-      final _asyncFlushFunc = flushFunc ?? _flushFunc;
-      if (_asyncFlushFunc != null) await _asyncFlushFunc(await _toList());
+      final AsyncFlushFunc _func = flushFunc ?? _flushFunc;
+      if (_func != null) await _func(await _toList());
       await _reset();
     });
   }
