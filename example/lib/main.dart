@@ -1,52 +1,53 @@
-// ignore_for_file: strong_mode_implicit_dynamic_type
-
 import 'dart:math';
-import 'package:collection/collection.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_persistent_queue/flutter_persistent_queue.dart';
 
 void main() => runApp(_MyApp());
 
-Future<void> _assert() async {
-  print('assertions started');
+void _assert(bool condition) {
+  if (condition != true) throw Error();
+}
 
+Future<void> _example() async {
+  final pq = PersistentQueue(filename: 'pq', flushAt: 2000);
   print('queue instantiated');
-  final pq = PersistentQueue(filename: 'pq', flushAt: 100000);
-  await pq.setup();
-  print('queue setup');
 
-  await pq.flush();
-  print('queue ready');
+  await pq.setup(noReload: true);
+  print('queue ready? ${pq.ready ? 'YES' : 'NO'}');
 
-  final Set<int> source = Set(), target = Set();
+  final Set<int> sourceSet = Set(), targetSet = Set();
   for (int i = 1000; i > 0; --i) {
     final int val = Random().nextInt(4294967296);
-    source.add(val);
+    sourceSet.add(val);
     await pq.push(<String, dynamic>{'val': val});
   }
-  print('queue loaded');
+  print('queue loaded, ${pq.length} elements');
 
   await pq.flush((list) async {
-    target.addAll(list.map((val) => val['val'] as int));
+    targetSet.addAll(list.map((val) => val['val'] as int));
   });
-  print('queue cleared');
+  print('queue flushed');
 
-  final sourceList = source.toList(), targetList = target.toList();
+  final sourceList = sourceSet.toList(), targetList = targetSet.toList();
   sourceList.sort();
   targetList.sort();
-  assert(IterableEquality().equals(sourceList, targetList));
 
-  print('queue assertion finished');
+  _assert(sourceList.length == targetList.length);
+  for (int i = sourceList.length - 1; i >= 0; --i) {
+    _assert(sourceList[i] == targetList[i]);
+  }
 }
 
 class _MyApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
-    _assert();
+    _example()
+        .then((_) => print('queue works 😀'))
+        .catchError((Error e) => print('broken queue 😤\n${e.stackTrace})'));
     return MaterialApp(
       home: Scaffold(
         body: Center(
-          child: Text('Please check the debug console'),
+          child: Text('all action happens on the console'),
         ),
       ),
     );
