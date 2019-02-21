@@ -87,9 +87,12 @@ class PersistentQueue {
   /// A queue only gets [ready] for write operations after a [setup()] finishes
   /// succesfully after construction. Failing to do so yields a
   /// `PersistQueueNotReady` [Exception].
-  Future<void> setup() async {
+  /// 
+  /// The optional parameter [noReload] forces the queue to start fresh instead
+  /// of reloading any past queued elements that persisted on the device.
+  Future<void> setup({bool noReload = false}) async {
     _ready = false;
-    await _reload();
+    noReload != true ? await _reload() : await _reset();
     _ready = true;
   }
 
