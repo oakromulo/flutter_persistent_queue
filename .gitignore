@@ -1,7 +1,15 @@
 .DS_Store
 .dart_tool/
-.idea
+.idea/
+
 *.iml
+*.log
+*.pyc
+*.swp
+
+.buildlog/
+.history
+.vscode/
 
 .packages
 .pub/
@@ -15,5 +23,11 @@ android/app/src/main/java/io/flutter/plugins/Generated*
 
 packages
 pubspec.lock
+
+**/doc/api/
+.dart_tool/
 .flutter-plugins
-doc/api/
+.packages
+.pub-cache/
+.pub/
+build/

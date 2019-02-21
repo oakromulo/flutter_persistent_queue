@@ -1,6 +1,19 @@
+.DS_Store
+.dart_tool/
+.idea
+*.iml
+
+.packages
+.pub/
+
+build/
+ios/.generated/
+ios/Flutter/Generated.xcconfig
+ios/Runner/GeneratedPluginRegistrant.*
+android/local.properties
+android/app/src/main/java/io/flutter/plugins/Generated*
+
 # Miscellaneous
-*.class
-*.lock
 *.log
 *.pyc
 *.swp
@@ -69,11 +82,3 @@ build/
 !**/ios/**/default.pbxuser
 !**/ios/**/default.perspectivev3
 !/packages/flutter_tools/test/data/dart_dependencies_test/**/.packages
-
-# Requirements at dev time
-*_spec.dart
-
-.metadata
-README.md
-/android
-/ios
