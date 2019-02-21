@@ -4,13 +4,11 @@ environment:
   sdk: ">=2.1.0 <3.0.0"
 
 dependencies:
+  collection: ^1.14.11
   flutter:
     sdk: flutter
   flutter_persistent_queue:
     path: ../
-
-devDependencies:
-  collection: ^1.14.11
 
 flutter:
   uses-material-design: true
