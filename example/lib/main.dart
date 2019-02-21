@@ -4,11 +4,36 @@ import 'package:flutter_persistent_queue/flutter_persistent_queue.dart';
 
 void main() => runApp(_MyApp());
 
-void _assert(bool condition) {
-  if (condition != true) throw Error();
+class _MyApp extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
+    return FutureBuilder(
+      future: _runTests(),
+      builder: (context, snapshot) {
+        return MaterialApp(
+          home: Scaffold(
+            body: Center(
+              child: Text(snapshot.data.toString() ?? 'hold on'),
+            ),
+          ),
+        );
+      },
+    );
+  }
 }
 
-Future<void> _example() async {
+Future<String> _runTests() async {
+  try {
+    await _basicTest();
+    return 'Queue works 😀';
+  } catch (e, s) {
+    print('Exception:\n $e');
+    print('Stack trace:\n $s');
+    return 'Something went wrong 😤';
+  }
+}
+
+Future<void> _basicTest() async {
   final pq = PersistentQueue(filename: 'pq', flushAt: 2000);
   print('queue instantiated');
 
@@ -38,18 +63,4 @@ Future<void> _example() async {
   }
 }
 
-class _MyApp extends StatelessWidget {
-  @override
-  Widget build(BuildContext context) {
-    _example()
-        .then((_) => print('queue works 😀'))
-        .catchError((Error e) => print('broken queue 😤\n${e.stackTrace})'));
-    return MaterialApp(
-      home: Scaffold(
-        body: Center(
-          child: Text('all action happens on the console'),
-        ),
-      ),
-    );
-  }
-}
+void _assert(bool test) => test != true ? throw Exception('QueueFailed') : null;
