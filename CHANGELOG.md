@@ -1,3 +1,7 @@
+## [0.1.1] - 2019-02-25
+
+- user-specified error handling behavior while flushing
+
 ## [0.1.0] - 2019-02-21
 
 - minor source code readability improvements
