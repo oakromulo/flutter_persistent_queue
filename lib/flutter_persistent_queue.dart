@@ -10,12 +10,16 @@
 /// https://pub.dartlang.org/documentation/collection/latest/)
 library flutter_persistent_queue;
 
+import 'package:flutter/foundation.dart';
 import 'package:meta/meta.dart';
 import 'package:localstorage/localstorage.dart';
 import 'package:synchronized/synchronized.dart';
 
 /// A spec for optional queue iteration prior to a [PersistentQueue.flush()].
 typedef AsyncFlushFunc = Future<void> Function(List<Map<String, dynamic>>);
+
+/// A signature for error handling within [AsyncFlushFunc] functions
+typedef ErrFunc = void Function(dynamic err);
 
 typedef _StorageFunc = Future<void> Function(LocalStorage);
 typedef _VoidAsyncFunc = Future<void> Function();
@@ -43,7 +47,8 @@ class PersistentQueue {
   /// https://github.com/lesnitsky/flutter_localstorage/issues/4).
   ///
   /// An optional [AsyncFlushFunc] [flushFunc] can be supplied at construction
-  /// time, to be called before each [flush()] operation emptying the queue.
+  /// time, to be called before each [flush()] operation emptying the queue. Any
+  /// errors while flushing can be handled by an optional [ErrFunc][errFunc].
   ///
   /// The next two named parameters [flushAt] and [flushTimeout] specify
   /// trigger conditions for firing automatic implicit [flush()] operations.
@@ -55,15 +60,18 @@ class PersistentQueue {
   PersistentQueue(
       {@required String filename,
       AsyncFlushFunc flushFunc,
+      ErrFunc errFunc,
       int flushAt = 100,
       Duration flushTimeout = const Duration(minutes: 5)})
       : _filename = filename,
         _flushFunc = flushFunc,
+        _errFunc = errFunc,
         _flushAt = flushAt,
         _flushTimeout = flushTimeout;
 
   final String _filename;
   final AsyncFlushFunc _flushFunc;
+  final ErrFunc _errFunc;
   final int _flushAt;
   final Duration _flushTimeout;
   final _queueLock = Lock(reentrant: true), _fileLock = Lock(reentrant: true);
@@ -101,12 +109,20 @@ class PersistentQueue {
   ///
   /// p.s if an [AsyncFlushFunc] was previously provided at construction time
   /// and the optional [flushFunc] argument is also given then the latter gets
-  /// prioritized and called instead.
-  Future<void> flush([AsyncFlushFunc flushFunc]) async {
+  /// prioritized and called instead. Same for the the also optional [ErrFunc]
+  /// [errFunc] to be executed if the [flushFunc] throws an error.
+  Future<void> flush([AsyncFlushFunc flushFunc, ErrFunc errFunc]) async {
     await _queueIdle(() async {
-      final AsyncFlushFunc _func = flushFunc ?? _flushFunc;
-      if (_func != null) await _func(await _toList());
-      await _reset();
+      try {
+        final AsyncFlushFunc _func = flushFunc ?? _flushFunc;
+        if (_func != null) await _func(await _toList());
+        await _reset();
+      } catch (e, s) {
+        final ErrFunc _err = errFunc ?? _errFunc;
+        if (_err != null) return _err(errFunc);
+        debugPrint(e.toString());
+        debugPrint(s.toString());
+      }
     });
   }
 
