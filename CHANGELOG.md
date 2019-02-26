@@ -1,3 +1,7 @@
+## [0.1.2] - 2019-02-26
+
+- fix error message and add stack trace to error handling
+
 ## [0.1.1] - 2019-02-25
 
 - user-specified error handling behavior while flushing

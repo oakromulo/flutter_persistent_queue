@@ -19,7 +19,7 @@ import 'package:synchronized/synchronized.dart';
 typedef AsyncFlushFunc = Future<void> Function(List<Map<String, dynamic>>);
 
 /// A signature for error handling within [AsyncFlushFunc] functions
-typedef ErrFunc = void Function(dynamic err);
+typedef ErrFunc = void Function(dynamic error, [StackTrace stack]);
 
 typedef _StorageFunc = Future<void> Function(LocalStorage);
 typedef _VoidAsyncFunc = Future<void> Function();
@@ -118,8 +118,8 @@ class PersistentQueue {
         if (_func != null) await _func(await _toList());
         await _reset();
       } catch (e, s) {
-        final ErrFunc _err = errFunc ?? _errFunc;
-        if (_err != null) return _err(errFunc);
+        final ErrFunc _func = errFunc ?? _errFunc;
+        if (_func != null) return _func(e, s);
         debugPrint(e.toString());
         debugPrint(s.toString());
       }
