@@ -58,7 +58,7 @@ class PersistentQueue {
   /// for a time-based [flush()] trigger, with a default [Duration] of 5
   /// minutes. Both parameters can only be bypassed by setting very large
   /// values, by design.
-  /// 
+  ///
   /// If [PersistentQueue.length] exceeds [maxLength], a silent overflow
   /// Exception gets thrown. It can only be captured via [ErrFunc] handlers,
   /// provided either at construction or at [push()] time. If [maxLength]
@@ -133,7 +133,7 @@ class PersistentQueue {
   }
 
   /// Pushes a JSON encodable [item] to the end of the queue.
-  /// 
+  ///
   /// An optional [ErrFunc] [errFunc] can be provided to handle write failures.
   Future<void> push(Map<String, dynamic> item, [ErrFunc errFunc]) async {
     await _queueIdle(() async {
@@ -141,8 +141,8 @@ class PersistentQueue {
         await _write(item);
         if (_len == 1) _newDeadline();
         if (_len >= _flushAt || _deadlineExpired()) await flush();
-        if (_len >=_maxLength) throw Exception('QueueOverflow: $_filename');
-      } catch(e, s) {
+        if (_len >= _maxLength) throw Exception('QueueOverflow: $_filename');
+      } catch (e, s) {
         final ErrFunc _func = errFunc ?? _errFunc;
         if (_func != null) _func(e, s);
       }
