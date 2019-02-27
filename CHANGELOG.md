@@ -1,3 +1,12 @@
+## [0.1.4] - 2019-02-27
+
+- bump [synchronized](https://pub.dartlang.org/packages/synchronized) to 
+[v2.1.0](
+https://pub.dartlang.org/packages/synchronized/versions/2.1.0) to properly
+synchronize inner blocks on reentrant locks.
+- improved [example](
+https://pub.dartlang.org/packages/flutter_persistent_queue#-example-tab-)
+
 ## [0.1.3] - 2019-02-27
 
 - silent flush/push error handling if user does not provide handlers

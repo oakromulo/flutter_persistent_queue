@@ -10,7 +10,6 @@
 /// https://pub.dartlang.org/documentation/collection/latest/)
 library flutter_persistent_queue;
 
-import 'package:flutter/foundation.dart';
 import 'package:meta/meta.dart';
 import 'package:localstorage/localstorage.dart';
 import 'package:synchronized/synchronized.dart';
