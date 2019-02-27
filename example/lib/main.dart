@@ -1,4 +1,5 @@
-import 'dart:math';
+import 'dart:math' show Random;
+import 'package:flutter/foundation.dart' show debugPrint;
 import 'package:flutter/material.dart';
 import 'package:flutter_persistent_queue/flutter_persistent_queue.dart';
 
@@ -10,10 +11,11 @@ class _MyApp extends StatelessWidget {
     return FutureBuilder(
       future: _runTests(),
       builder: (context, snapshot) {
+        final txt = snapshot.data == null ? 'Wait!' : snapshot.data as String;
         return MaterialApp(
           home: Scaffold(
             body: Center(
-              child: Text(snapshot.data.toString() ?? 'hold on'),
+              child: Text(txt),
             ),
           ),
         );
@@ -25,18 +27,15 @@ class _MyApp extends StatelessWidget {
 Future<String> _runTests() async {
   try {
     await _basicTest();
-    return 'Queue works 😀';
+    return 'Queue works! 😀';
   } catch (e, s) {
-    print('Exception:\n $e');
-    print('Stack trace:\n $s');
+    _errHdlr(e, s);
     return 'Something went wrong 😤';
   }
 }
 
 Future<void> _basicTest() async {
-  final pq = PersistentQueue(filename: 'pq', flushAt: 2000);
-  print('queue instantiated');
-
+  final pq = PersistentQueue(filename: 'pq', flushAt: 2000, errFunc: _errHdlr);
   await pq.setup(noReload: true);
   print('queue ready? ${pq.ready ? 'YES' : 'NO'}');
 
@@ -64,3 +63,4 @@ Future<void> _basicTest() async {
 }
 
 void _assert(bool cta) => cta != true ? throw Exception('QueueFailed') : null;
+void _errHdlr(dynamic err, [StackTrace stack]) => debugPrint('$err\n$stack');
