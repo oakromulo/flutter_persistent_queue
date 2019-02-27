@@ -48,7 +48,8 @@ class PersistentQueue {
   ///
   /// An optional [AsyncFlushFunc] [flushFunc] can be supplied at construction
   /// time, to be called before each [flush()] operation emptying the queue. Any
-  /// errors while flushing can be handled by an optional [ErrFunc][errFunc].
+  /// errors while pushing new elements or flushing are handled by an optional
+  /// [ErrFunc][errFunc].
   ///
   /// The next two named parameters [flushAt] and [flushTimeout] specify
   /// trigger conditions for firing automatic implicit [flush()] operations.
@@ -57,22 +58,29 @@ class PersistentQueue {
   /// for a time-based [flush()] trigger, with a default [Duration] of 5
   /// minutes. Both parameters can only be bypassed by setting very large
   /// values, by design.
+  /// 
+  /// If [PersistentQueue.length] exceeds [maxLength], a silent overflow
+  /// Exception gets thrown. It can only be captured via [ErrFunc] handlers,
+  /// provided either at construction or at [push()] time. If [maxLength]
+  /// is not provided then it gets defined as 5 times the [flushAt] parameter.
   PersistentQueue(
       {@required String filename,
       AsyncFlushFunc flushFunc,
       ErrFunc errFunc,
       int flushAt = 100,
+      int maxLength,
       Duration flushTimeout = const Duration(minutes: 5)})
       : _filename = filename,
         _flushFunc = flushFunc,
         _errFunc = errFunc,
         _flushAt = flushAt,
+        _maxLength = maxLength ?? flushAt * 5,
         _flushTimeout = flushTimeout;
 
   final String _filename;
   final AsyncFlushFunc _flushFunc;
   final ErrFunc _errFunc;
-  final int _flushAt;
+  final int _flushAt, _maxLength;
   final Duration _flushTimeout;
   final _queueLock = Lock(reentrant: true), _fileLock = Lock(reentrant: true);
 
@@ -119,24 +127,30 @@ class PersistentQueue {
         await _reset();
       } catch (e, s) {
         final ErrFunc _func = errFunc ?? _errFunc;
-        if (_func != null) return _func(e, s);
-        debugPrint(e.toString());
-        debugPrint(s.toString());
+        if (_func != null) _func(e, s);
       }
     });
   }
 
   /// Pushes a JSON encodable [item] to the end of the queue.
-  Future<void> push(Map<String, dynamic> item) async {
+  /// 
+  /// An optional [ErrFunc] [errFunc] can be provided to handle write failures.
+  Future<void> push(Map<String, dynamic> item, [ErrFunc errFunc]) async {
     await _queueIdle(() async {
-      await _write(item);
-      if (_len == 1) _newDeadline();
-      if (_len >= _flushAt || _deadlineExpired()) await flush();
+      try {
+        await _write(item);
+        if (_len == 1) _newDeadline();
+        if (_len >= _flushAt || _deadlineExpired()) await flush();
+        if (_len >=_maxLength) throw Exception('QueueOverflow: $_filename');
+      } catch(e, s) {
+        final ErrFunc _func = errFunc ?? _errFunc;
+        if (_func != null) _func(e, s);
+      }
     });
   }
 
   Future<void> _queueIdle(_VoidAsyncFunc inputFunc) async {
-    if (!_ready) throw Exception('PersistQueueNotReady');
+    if (!_ready) throw Exception('QueueNotReady: $_filename');
     await _queueLock.synchronized(() async {
       await inputFunc();
     });
