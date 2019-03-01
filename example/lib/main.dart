@@ -29,28 +29,29 @@ Future<String> _runTests() async {
     await _basicTest();
     return 'Queue works! 😀';
   } catch (e, s) {
-    _errHdlr(e, s);
+    _err(e, s);
     return 'Something went wrong 😤';
   }
 }
 
 Future<void> _basicTest() async {
-  final pq = PersistentQueue(filename: 'pq', flushAt: 2000, errFunc: _errHdlr);
-  await pq.setup(noReload: true);
-  print('queue ready? ${pq.ready ? 'YES' : 'NO'}');
+  final pq = PersistentQueue('pq', flushAt: 100, errFunc: _err, noReload: true);
 
   final Set<int> sourceSet = Set(), targetSet = Set();
-  for (int i = 1000; i > 0; --i) {
+  for (int i = 50; i > 0; --i) {
     final int val = Random().nextInt(4294967296);
     sourceSet.add(val);
-    await pq.push(<String, dynamic>{'val': val});
+    pq.push(<String, dynamic>{'val': val});
   }
-  print('queue loaded, ${pq.length} elements');
+  print('all data pushed');
 
-  await pq.flush((list) async {
+  pq.flush((list) async {
     targetSet.addAll(list.map((val) => val['val'] as int));
   });
-  print('queue flushed');
+  print('flush setup ready');
+
+  // await before validation
+  await Future.delayed(Duration(seconds: 10));
 
   final sourceList = sourceSet.toList(), targetList = targetSet.toList();
   sourceList.sort();
@@ -63,4 +64,4 @@ Future<void> _basicTest() async {
 }
 
 void _assert(bool cta) => cta != true ? throw Exception('QueueFailed') : null;
-void _errHdlr(dynamic err, [StackTrace stack]) => debugPrint('$err\n$stack');
+void _err(dynamic err, [StackTrace stack]) => debugPrint('$err\n$stack');
