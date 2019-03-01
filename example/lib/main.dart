@@ -36,9 +36,10 @@ Future<String> _runTests() async {
 
 Future<void> _basicTest() async {
   final pq = PersistentQueue('pq', flushAt: 100, errFunc: _err, noReload: true);
-
+  
+  const setLen = 50; 
   final Set<int> sourceSet = Set(), targetSet = Set();
-  for (int i = 50; i > 0; --i) {
+  for (int i = setLen; i > 0; --i) {
     final int val = Random().nextInt(4294967296);
     sourceSet.add(val);
     pq.push(<String, dynamic>{'val': val});
@@ -48,10 +49,18 @@ Future<void> _basicTest() async {
   pq.flush((list) async {
     targetSet.addAll(list.map((val) => val['val'] as int));
   });
-  print('flush setup ready');
+  print('flush scheduled');
 
-  // await before validation
-  await Future.delayed(Duration(seconds: 10));
+  // polling
+  int oldLen = -1, n = 0;
+  while(targetSet.length != setLen || n > 5000000) {
+    n++;
+    if (pq.length != oldLen) {
+      print(pq.length);
+      oldLen = pq.length;
+    }
+    await Future.delayed(Duration(microseconds: 1));
+  }
 
   final sourceList = sourceSet.toList(), targetList = targetSet.toList();
   sourceList.sort();
@@ -61,6 +70,8 @@ Future<void> _basicTest() async {
   for (int i = sourceList.length - 1; i >= 0; --i) {
     _assert(sourceList[i] == targetList[i]);
   }
+
+  print('queue works!');
 }
 
 void _assert(bool cta) => cta != true ? throw Exception('QueueFailed') : null;

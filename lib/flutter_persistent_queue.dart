@@ -1,8 +1,8 @@
 ///
 library flutter_persistent_queue;
 
-import 'dart:async';
 import 'package:localstorage/localstorage.dart';
+import './util/buffer.dart';
 
 ///
 class PersistentQueue {
@@ -14,7 +14,7 @@ class PersistentQueue {
     this.flushTimeout = const Duration(minutes: 5),
     bool noReload = false
   }) {
-    _buffer = _Buffer<_Event>(_onData);
+    _buffer = Buffer<_Event>(_onData);
     if (noReload) _buffer.push(_Event(_EventType.RESET));
     else _buffer.push(_Event(_EventType.RELOAD));
   }
@@ -31,11 +31,10 @@ class PersistentQueue {
   ///
   final int flushAt;
 
-
   ///
   final Duration flushTimeout;
 
-  _Buffer<_Event> _buffer;
+  Buffer<_Event> _buffer;
   DateTime _deadline;
   int _len = 0;
 
@@ -53,19 +52,19 @@ class PersistentQueue {
   }
 
   ///
-  Future destroy() => _buffer.destroy();
+  Future<void> destroy() => _buffer.destroy();
 
   ///
   int get bufferLength => _buffer.length;
 
-  Future _onData(_Event event) {
+  Future<void> _onData(_Event event) {
     if (event.type == _EventType.FLUSH) return _onFlush(event);
     else if (event.type == _EventType.RELOAD) return _onReload(event);
     else if (event.type == _EventType.RESET) return _onReset(event);
     return _onPush(event);
   }
 
-  Future _onPush(_Event event) async {
+  Future<void> _onPush(_Event event) async {
     try {
       await _write(event.item); // call event.onWrite?
       if (_len == 1) _deadline = _newDeadline(flushTimeout);
@@ -79,10 +78,11 @@ class PersistentQueue {
     }
   }
 
-  Future _onFlush(_Event event) async {
+  Future<void> _onFlush(_Event event) async {
     try {
       final AsyncFlushFunc _func = event.flush ?? flushFunc;
-      if (_func != null) await _func(await _toList());
+      final myList = await _toList();
+      if (_func != null) await _func(myList);
       await _onReset();
     } catch (e, s) {
       final ErrFunc _func = event.onError ?? errFunc;
@@ -100,31 +100,32 @@ class PersistentQueue {
     });
 
   // may seriously throw
-  Future _onReset([_Event event]) =>
+  Future<void> _onReset([_Event event]) =>
     _file((LocalStorage storage) async {
       await storage.clear();
       _len = 0;
     });
 
   // may throw
-  Future _toList() =>
-    _file((LocalStorage storage) async {
-      final li = List<Map<String, dynamic>>(_len);
+  Future<List<Map<String, dynamic>>> _toList() async {
+    final li = List<Map<String, dynamic>>(_len);
+    await _file((LocalStorage storage) async {
       for (int k = 0; k < _len; ++k) {
         li[k] = await storage.getItem('$k') as Map<String, dynamic>;
       }
-      return li;
     });
+    return li;
+  }
 
   // may throw
-  Future _write(Map<String, dynamic> value) =>
+  Future<void> _write(Map<String, dynamic> value) =>
     _file((LocalStorage storage) async {
       await storage.setItem('$_len', value);
       _len++;
     });
 
   // may throw
-  Future _file(_StorageFunc inputFunc) async {
+  Future<void> _file(_StorageFunc inputFunc) async {
     final storage = LocalStorage(filename);
     await storage.ready;
     await inputFunc(storage);
@@ -145,34 +146,10 @@ class _Event {
 
 enum _EventType { PUSH, FLUSH, RELOAD, RESET }  
 
-class _Buffer<T> {
-  _Buffer(Future Function(T) onData, [Function onError]) {
-    _sub = _controller.stream.listen((T event) {
-      _sub.pause(onData(event).catchError(onError).whenComplete(() => _len--));
-    });
-  }
-
-  final _controller = StreamController<T>();
-  StreamSubscription<T> _sub;
-  int _len = 0;
-
-  int get length => _len;
-
-  void push(T event) {
-    _len++;
-    _controller.add(event);
-  }
-
-  Future destroy() async {
-    await _sub.cancel();
-    await _controller.close();
-  }
-}
-
 /// A spec for optional queue iteration prior to a [PersistentQueue.flush()].
-typedef AsyncFlushFunc = Future Function(List<Map<String, dynamic>>);
+typedef AsyncFlushFunc = Future<void> Function(List<Map<String, dynamic>>);
 
 ///
 typedef ErrFunc = Function(dynamic error, [StackTrace stack]);
 
-typedef _StorageFunc = Future Function(LocalStorage);
+typedef _StorageFunc = Future<void> Function(LocalStorage);
