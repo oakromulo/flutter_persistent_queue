@@ -7,16 +7,17 @@ import './util/buffer.dart';
 ///
 class PersistentQueue {
   ///
-  PersistentQueue(this.filename, {
-    this.errFunc,
-    this.flushFunc,
-    this.flushAt = 100,
-    this.flushTimeout = const Duration(minutes: 5),
-    bool noReload = false
-  }) {
+  PersistentQueue(this.filename,
+      {this.errFunc,
+      this.flushFunc,
+      this.flushAt = 100,
+      this.flushTimeout = const Duration(minutes: 5),
+      bool noReload = false}) {
     _buffer = Buffer<_Event>(_onData);
-    if (noReload) _buffer.push(_Event(_EventType.RESET));
-    else _buffer.push(_Event(_EventType.RELOAD));
+    if (noReload)
+      _buffer.push(_Event(_EventType.RESET));
+    else
+      _buffer.push(_Event(_EventType.RELOAD));
   }
 
   ///
@@ -41,12 +42,12 @@ class PersistentQueue {
   ///
   int get length => _len;
 
-  /// 
+  ///
   void push(Map<String, dynamic> item, [ErrFunc errFunc]) {
     _buffer.push(_Event(_EventType.PUSH, item: item, onError: errFunc));
   }
 
-  /// 
+  ///
   void flush([AsyncFlushFunc flushFunc, ErrFunc errFunc]) {
     _buffer.push(_Event(_EventType.FLUSH, flush: flushFunc, onError: errFunc));
   }
@@ -58,8 +59,10 @@ class PersistentQueue {
   int get bufferLength => _buffer.length;
 
   Future<void> _onData(_Event event) {
-    if (event.type == _EventType.FLUSH) return _onFlush(event);
-    else if (event.type == _EventType.RELOAD) return _onReload(event);
+    if (event.type == _EventType.FLUSH)
+      return _onFlush(event);
+    else if (event.type == _EventType.RELOAD)
+      return _onReload(event);
     else if (event.type == _EventType.RESET) return _onReset(event);
     return _onPush(event);
   }
@@ -91,20 +94,18 @@ class PersistentQueue {
   }
 
   // MAY SERIOUSLY THROW
-  Future<void> _onReload([_Event event]) =>
-    _file((LocalStorage storage) async {
-      for (_len = 0;; ++_len) {
-        if (await storage.getItem('$_len') == null) break;
-      }
-      if (_len > 0) _deadline = _newDeadline(flushTimeout);
-    });
+  Future<void> _onReload([_Event event]) => _file((LocalStorage storage) async {
+        for (_len = 0;; ++_len) {
+          if (await storage.getItem('$_len') == null) break;
+        }
+        if (_len > 0) _deadline = _newDeadline(flushTimeout);
+      });
 
   // may seriously throw
-  Future<void> _onReset([_Event event]) =>
-    _file((LocalStorage storage) async {
-      await storage.clear();
-      _len = 0;
-    });
+  Future<void> _onReset([_Event event]) => _file((LocalStorage storage) async {
+        await storage.clear();
+        _len = 0;
+      });
 
   // may throw
   Future<List<Map<String, dynamic>>> _toList() async {
@@ -119,10 +120,10 @@ class PersistentQueue {
 
   // may throw
   Future<void> _write(Map<String, dynamic> value) =>
-    _file((LocalStorage storage) async {
-      await storage.setItem('$_len', value);
-      _len++;
-    });
+      _file((LocalStorage storage) async {
+        await storage.setItem('$_len', value);
+        _len++;
+      });
 
   // may throw
   Future<void> _file(_StorageFunc inputFunc) async {
@@ -144,7 +145,7 @@ class _Event {
   final ErrFunc onError;
 }
 
-enum _EventType { PUSH, FLUSH, RELOAD, RESET }  
+enum _EventType { PUSH, FLUSH, RELOAD, RESET }
 
 /// A spec for optional queue iteration prior to a [PersistentQueue.flush()].
 typedef AsyncFlushFunc = Future<void> Function(List<Map<String, dynamic>>);
