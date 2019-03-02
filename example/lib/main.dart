@@ -35,43 +35,55 @@ Future<String> _runTests() async {
 }
 
 Future<void> _basicTest() async {
-  final pq = PersistentQueue('pq', flushAt: 100, errFunc: _err, noReload: true);
-  
-  const setLen = 50; 
-  final Set<int> sourceSet = Set(), targetSet = Set();
-  for (int i = setLen; i > 0; --i) {
+  const testLen = 10000;
+  final source = <int>[], target = <int>[];
+
+  Future<void> flushFunc(List<Map<String, dynamic>> list) async {
+    try {
+      debugPrint('flush list: ${list.length}');
+      target.addAll(list.map((val) => val['val'] as int));
+    } catch(e, s) {
+      _err(e, s);
+    }
+  }
+
+  final pq = PersistentQueue('pq',
+    flushAt: testLen ~/ 5,
+    flushFunc: flushFunc,
+    maxLength: testLen * 2,
+    errFunc: _err,
+    noReload: true);
+
+  for (int i = testLen; i > 0; --i) {
     final int val = Random().nextInt(4294967296);
-    sourceSet.add(val);
+    source.add(val);
     pq.push(<String, dynamic>{'val': val});
   }
-  print('all data pushed');
-
-  pq.flush((list) async {
-    targetSet.addAll(list.map((val) => val['val'] as int));
-  });
-  print('flush scheduled');
+  debugPrint('all data pushed');
 
   // polling
   int oldLen = -1, n = 0;
-  while(targetSet.length != setLen || n > 5000000) {
+  while(target.length != source.length || n > 500000000) {
     n++;
-    if (pq.length != oldLen) {
-      print(pq.length);
+    if (pq.length != oldLen && pq.length % 10 == 0) {
+      debugPrint('${target.length} - ${pq.length}');
       oldLen = pq.length;
+      continue;
     }
-    await Future.delayed(Duration(microseconds: 1));
+    await Future<void>.delayed(Duration(milliseconds: 1));
   }
 
-  final sourceList = sourceSet.toList(), targetList = targetSet.toList();
-  sourceList.sort();
-  targetList.sort();
-
-  _assert(sourceList.length == targetList.length);
-  for (int i = sourceList.length - 1; i >= 0; --i) {
-    _assert(sourceList[i] == targetList[i]);
+  _assert(target.length == source.length);
+  for (int i = source.length - 1; i >= 0; --i) {
+    _assert(source[i] == target[i]);
   }
+  debugPrint('pqp ${pq.length}');
+  debugPrint('${source.length} e ${target.length}');
+  //_assert(pq.length == 0);
 
-  print('queue works!');
+  await pq.destroy();
+  debugPrint('queue works!');
+
 }
 
 void _assert(bool cta) => cta != true ? throw Exception('QueueFailed') : null;
