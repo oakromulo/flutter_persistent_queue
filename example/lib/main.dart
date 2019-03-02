@@ -78,12 +78,10 @@ Future<void> _basicTest() async {
     _assert(source[i] == target[i]);
   }
   debugPrint('pqp ${pq.length}');
-  debugPrint('${source.length} e ${target.length}');
-  //_assert(pq.length == 0);
+  debugPrint('${source.length} / ${target.length}');
 
   await pq.destroy();
   debugPrint('queue works!');
-
 }
 
 void _assert(bool cta) => cta != true ? throw Exception('QueueFailed') : null;

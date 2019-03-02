@@ -122,7 +122,13 @@ class PersistentQueue {
 
   Future<void> _onReset(_Event event) async {
     await _file((LocalStorage storage) async {
-      await storage.clear();
+      try {
+        _len = 0;
+        await storage.clear(); // slow!!
+      } catch (e, s) {
+        debugPrint('reset error: $e\n$s');
+        //if (errFunc != null) errFunc(e, s);
+      }
       _len = 0;
     });
   }
@@ -151,7 +157,7 @@ class PersistentQueue {
       await storage.ready;
       await inputFunc(storage);
     } catch (e, s) {
-      debugPrint('flush error: $e\n$s');
+      debugPrint('file error: $e\n$s');
       //if (errFunc != null) errFunc(e, s);
     }
   }
