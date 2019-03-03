@@ -42,8 +42,10 @@ Future<String> _test() async {
       source.add(v);
       pq.push(<String, dynamic>{'v': v});
     }
+    debugPrint('all data pushed to queue');
+
     pq.flush();
-    debugPrint('all data pushed to queue and a final flush got scheduled');
+    debugPrint('final flush scheduled');
 
     bool hasReset = false;
     pq.reset(() async => hasReset = true);
