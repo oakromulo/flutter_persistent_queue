@@ -32,18 +32,18 @@ Future<String> _test() async {
     final pq = PersistentQueue('pq',
         flushAt: testLen ~/ 10,
         maxLength: testLen * 2,
-        onFlush: (list) async =>
-            target.addAll(list.map((v) => v['val'] as int)),
+        onFlush: (list) async => target.addAll(list.map((v) => v['v'] as int)),
         onError: _printError,
         noReload: true);
+    debugPrint('queue instantiated');
 
     for (int i = testLen; i > 0; --i) {
-      final int val = Random().nextInt(4294967295);
-      source.add(val);
-      pq.push(<String, dynamic>{'val': val});
+      final v = Random().nextInt(4294967295);
+      source.add(v);
+      pq.push(<String, dynamic>{'v': v});
     }
     pq.flush();
-    debugPrint('all data pushed and a final flush scheduled');
+    debugPrint('all data pushed to queue and a final flush got scheduled');
 
     bool hasReset = false;
     pq.reset(() async => hasReset = true);
@@ -58,11 +58,15 @@ Future<String> _test() async {
       }
       await Future<void>.delayed(Duration(milliseconds: 1));
     }
+    debugPrint('polling finished');
 
     _assert(pq.length == 0);
     _assert(target.length == source.length);
     for (int i = testLen - 1; i >= 0; --i) _assert(source[i] == target[i]);
+    debugPrint('all assertions passed');
+
     await pq.destroy();
+    debugPrint('queue destroyed');
 
     const msg = 'Queue works! 😀';
     debugPrint(msg);
