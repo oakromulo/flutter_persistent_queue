@@ -6,14 +6,14 @@ import 'package:localstorage/localstorage.dart' show LocalStorage;
 
 import './classes/buffer.dart' show Buffer;
 import './classes/queue_event.dart' show QueueEvent, QueueEventType;
-import './typedefs/typedefs.dart' show AsyncFlushFunc, StorageFunc, ErrFunc;
+import './typedefs/typedefs.dart' show OnFlush, StorageFunc, OnError;
 
 ///
 class PersistentQueue {
   ///
   PersistentQueue(this.filename,
-      {this.errFunc,
-      this.flushFunc,
+      {this.onError,
+      this.onFlush,
       this.flushAt = 100,
       this.flushTimeout = const Duration(minutes: 5),
       int maxLength,
@@ -31,10 +31,10 @@ class PersistentQueue {
   final String filename;
 
   ///
-  final AsyncFlushFunc flushFunc;
+  final OnFlush onFlush;
 
   ///
-  final ErrFunc errFunc;
+  final OnError onError;
 
   ///
   final int flushAt;
@@ -66,9 +66,9 @@ class PersistentQueue {
   }
 
   /// push a flush instruction to the end of the event buffer
-  void flush([AsyncFlushFunc flushFunc /*, [ErrFunc errFunc]*/]) {
+  void flush([OnFlush flushFunc /*, [ErrFunc errFunc]*/]) {
     const type = QueueEventType.FLUSH;
-    final event = QueueEvent(type, flush: flushFunc /*, onError: errFunc*/);
+    final event = QueueEvent(type, onFlush: flushFunc /*, onError: errFunc*/);
     _buffer.push(event);
   }
 
@@ -105,7 +105,7 @@ class PersistentQueue {
   Future<void> _onFlush(QueueEvent event) async {
     try {
       print('flush attempt');
-      final AsyncFlushFunc _func = event.flush ?? flushFunc;
+      final OnFlush _func = event.onFlush ?? onFlush;
       if (_func != null) await _func(await _toList());
       await _onReset(event);
     } catch (e, s) {

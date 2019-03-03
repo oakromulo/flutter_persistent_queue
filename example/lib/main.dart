@@ -29,7 +29,7 @@ Future<String> _runTests() async {
     await _basicTest();
     return 'Queue works! 😀';
   } catch (e, s) {
-    _err(e, s);
+    _onError(e, s);
     return 'Something went wrong 😤';
   }
 }
@@ -38,20 +38,20 @@ Future<void> _basicTest() async {
   const testLen = 10000;
   final source = <int>[], target = <int>[];
 
-  Future<void> flushFunc(List<Map<String, dynamic>> list) async {
+  Future<void> onFlush(List<Map<String, dynamic>> list) async {
     try {
       debugPrint('flush list: ${list.length}');
       target.addAll(list.map((val) => val['val'] as int));
     } catch(e, s) {
-      _err(e, s);
+      _onError(e, s);
     }
   }
 
   final pq = PersistentQueue('pq',
     flushAt: testLen ~/ 5,
-    flushFunc: flushFunc,
+    onFlush: onFlush,
     maxLength: testLen * 2,
-    errFunc: _err,
+    onError: _onError,
     noReload: true);
 
   for (int i = testLen; i > 0; --i) {
@@ -85,4 +85,4 @@ Future<void> _basicTest() async {
 }
 
 void _assert(bool cta) => cta != true ? throw Exception('QueueFailed') : null;
-void _err(dynamic err, [StackTrace stack]) => debugPrint('$err\n$stack');
+void _onError(dynamic err, [StackTrace stack]) => debugPrint('$err\n$stack');
