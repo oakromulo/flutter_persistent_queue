@@ -14,4 +14,4 @@ class QueueEvent {
   final OnError onError;
 }
 
-enum QueueEventType { FLUSH, PUSH, RELOAD, RESET }
+enum QueueEventType { FLUSH, PUSH, RELOAD }

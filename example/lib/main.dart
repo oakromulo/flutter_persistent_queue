@@ -33,8 +33,7 @@ Future<String> _runTests() async {
     debugPrint(msg);
     return msg;
   } catch (e, s) {
-    _printError(e, s);
-
+    debugPrint('$e\n$s');
     const msg = 'Something went wrong 😤';
     debugPrint(msg);
     return msg;
@@ -51,10 +50,9 @@ Future<void> _unawaitedTest() async {
   final pq = PersistentQueue('_unawaited_test_',
       flushAt: testLen ~/ 20,
       maxLength: testLen * 2,
-      onFlush: flushAction,
-      onError: _printError,
-      noReload: true);
+      onFlush: flushAction);
 
+  await pq.flush((_) async => debugPrint('clear queue for unawaited test'));
   for (int i = testLen; i > 0; --i) {
     final v = Random().nextInt(4294967295);
     source.add(v);
@@ -68,11 +66,11 @@ Future<void> _unawaitedTest() async {
 
   int oldLen = -1;
   while (!hasReset) {
-    if (pq.length != oldLen && pq.length % 10 == 0) {
+    if (pq.length != oldLen && pq.length % 100 == 0) {
       debugPrint('polling: ${target.length} - ${pq.length}');
       oldLen = pq.length;
     }
-    await Future<void>.delayed(Duration(microseconds: 10));
+    await Future<void>.delayed(Duration(microseconds: 100));
   }
   debugPrint('polling finished');
 
@@ -91,10 +89,9 @@ Future<void> _sequentialTest() async {
   final pq = PersistentQueue('_regular_test_',
       flushAt: testLen ~/ 20,
       maxLength: testLen * 2,
-      onFlush: flushAction,
-      onError: _printError,
-      noReload: true);
+      onFlush: flushAction);
 
+  await pq.flush((_) async => debugPrint('clear queue for sequential test'));
   for (int i = testLen; i > 0; --i) {
     final v = Random().nextInt(4294967295);
     source.add(v);
@@ -114,4 +111,3 @@ Future<void> _finalize(PersistentQueue pq, List<int> source, List<int> target) {
 }
 
 void _assert(bool cta) => cta != true ? throw Exception('QueueFailed') : null;
-void _printError(dynamic e, [StackTrace stack]) => debugPrint('$e\n$stack');
