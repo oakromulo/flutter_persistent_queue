@@ -6,5 +6,8 @@ typedef OnFlush = Future<void> Function(List<Map<String, dynamic>>);
 ///
 typedef OnError = void Function(dynamic error, [StackTrace stack]);
 
+///
+typedef OnReset = Future<void> Function();
+
 /// @nodoc
 typedef StorageFunc = Future<void> Function(LocalStorage);

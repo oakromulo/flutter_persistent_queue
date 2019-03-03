@@ -6,7 +6,7 @@ import 'package:localstorage/localstorage.dart' show LocalStorage;
 
 import './classes/buffer.dart' show Buffer;
 import './classes/queue_event.dart' show QueueEvent, QueueEventType;
-import './typedefs/typedefs.dart' show OnFlush, StorageFunc, OnError;
+import './typedefs/typedefs.dart' show OnFlush, StorageFunc, OnError, OnReset;
 
 ///
 class PersistentQueue {
@@ -14,6 +14,7 @@ class PersistentQueue {
   PersistentQueue(this.filename,
       {this.onError,
       this.onFlush,
+      this.onReset,
       this.flushAt = 100,
       this.flushTimeout = const Duration(minutes: 5),
       int maxLength,
@@ -35,6 +36,9 @@ class PersistentQueue {
 
   ///
   final OnError onError;
+
+  ///
+  final OnReset onReset;
 
   ///
   final int flushAt;
@@ -66,9 +70,16 @@ class PersistentQueue {
   }
 
   /// push a flush instruction to the end of the event buffer
-  void flush([OnFlush flushFunc /*, [ErrFunc errFunc]*/]) {
+  void flush([OnFlush onFlush /*, [ErrFunc errFunc]*/]) {
     const type = QueueEventType.FLUSH;
-    final event = QueueEvent(type, onFlush: flushFunc /*, onError: errFunc*/);
+    final event = QueueEvent(type, onFlush: onFlush /*, onError: errFunc*/);
+    _buffer.push(event);
+  }
+
+  /// push a reset instruction to the end of the buffer
+  void reset([OnReset onReset]) {
+    const type =QueueEventType.RESET;
+    final event = QueueEvent(type, onReset: onReset);
     _buffer.push(event);
   }
 
@@ -79,7 +90,6 @@ class PersistentQueue {
   // then an event handler method gets executed according to [_Event.type]
   Future<void> _onData(QueueEvent event) async {
     if (event.type == QueueEventType.FLUSH) {
-      print('flush request');
       await _onFlush(event);
     } else if (event.type == QueueEventType.PUSH) {
       await _onPush(event);
@@ -104,9 +114,11 @@ class PersistentQueue {
 
   Future<void> _onFlush(QueueEvent event) async {
     try {
-      print('flush attempt');
-      final OnFlush _func = event.onFlush ?? onFlush;
-      if (_func != null) await _func(await _toList());
+      // acknowledge
+      final OnFlush _onFlush = event.onFlush ?? onFlush;
+      if (_onFlush != null) await _onFlush(await _toList());
+
+      // clear on success
       await _onReset(event);
     } catch (e, s) {
       debugPrint('flush error: $e\n$s');
@@ -115,25 +127,30 @@ class PersistentQueue {
     }
   }
 
+  Future<void> _onReset(QueueEvent event) async {
+    await _file((LocalStorage storage) async {
+      try {
+        // reset action
+        await storage.clear(); // hard clear a bit slow!!
+        _len = 0;
+
+        // acknowledge
+        final OnReset _onReset = event.onReset ?? onReset;
+        if (_onReset != null) await _onReset();
+      } catch (e, s) {
+        debugPrint('reset error: $e\n$s');
+        //if (errFunc != null) errFunc(e, s);
+      }
+      _len = 0;
+    });
+  }
+
   Future<void> _onReload(QueueEvent event) async {
     await _file((LocalStorage storage) async {
       for (_len = 0;; ++_len) {
         if (await storage.getItem('$_len') == null) break;
       }
       if (_len > 0) _deadline = _newDeadline(flushTimeout);
-    });
-  }
-
-  Future<void> _onReset(QueueEvent event) async {
-    await _file((LocalStorage storage) async {
-      try {
-        _len = 0;
-        await storage.clear(); // slow!!
-      } catch (e, s) {
-        debugPrint('reset error: $e\n$s');
-        //if (errFunc != null) errFunc(e, s);
-      }
-      _len = 0;
     });
   }
 

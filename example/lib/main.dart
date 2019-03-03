@@ -40,7 +40,7 @@ Future<void> _basicTest() async {
 
   Future<void> onFlush(List<Map<String, dynamic>> list) async {
     try {
-      debugPrint('flush list: ${list.length}');
+      debugPrint('regular flush: ${list.length}');
       target.addAll(list.map((val) => val['val'] as int));
     } catch(e, s) {
       _onError(e, s);
@@ -50,6 +50,7 @@ Future<void> _basicTest() async {
   final pq = PersistentQueue('pq',
     flushAt: testLen ~/ 5,
     onFlush: onFlush,
+    onReset: () async => debugPrint('queue reset!'),
     maxLength: testLen * 2,
     onError: _onError,
     noReload: true);
@@ -61,24 +62,34 @@ Future<void> _basicTest() async {
   }
   debugPrint('all data pushed');
 
+  Future<void> finalFlush(List<Map<String, dynamic>> list) async {
+    try {
+      debugPrint('final flush: ${list.length}');
+      target.addAll(list.map((val) => val['val'] as int));
+    } catch(e, s) {
+      _onError(e, s);
+    }
+  }
+  pq.flush(finalFlush);
+  debugPrint('final flush scheduled');
+
+  bool hasReset = false;
+  pq.reset(() async => hasReset = true);
+  debugPrint('final reset scheduled');
+
   // polling
-  int oldLen = -1, n = 0;
-  while(target.length != source.length || n > 500000000) {
-    n++;
+  int oldLen = -1;
+  for (int i = 0; !hasReset && i < 30000; ++i) {
     if (pq.length != oldLen && pq.length % 10 == 0) {
       debugPrint('${target.length} - ${pq.length}');
       oldLen = pq.length;
-      continue;
     }
     await Future<void>.delayed(Duration(milliseconds: 1));
   }
 
+  _assert(pq.length == 0);
   _assert(target.length == source.length);
-  for (int i = source.length - 1; i >= 0; --i) {
-    _assert(source[i] == target[i]);
-  }
-  debugPrint('pqp ${pq.length}');
-  debugPrint('${source.length} / ${target.length}');
+  for (int i = testLen - 1; i >= 0; --i) _assert(source[i] == target[i]);
 
   await pq.destroy();
   debugPrint('queue works!');
