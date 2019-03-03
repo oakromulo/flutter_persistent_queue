@@ -69,6 +69,7 @@ Future<String> _test() async {
     return msg;
   } catch (e, s) {
     _printError(e, s);
+
     const msg = 'Something went wrong 😤';
     debugPrint(msg);
     return msg;
