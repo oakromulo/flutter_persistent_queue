@@ -1,5 +1,5 @@
-import 'dart:math' show Random;
-import 'package:flutter/foundation.dart' show debugPrint;
+import 'dart:math';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_persistent_queue/flutter_persistent_queue.dart';
 
@@ -9,7 +9,7 @@ class _MyApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return FutureBuilder(
-      future: _runTests(),
+      future: _test(),
       builder: (context, snapshot) {
         final txt = snapshot.data == null ? 'Wait!' : snapshot.data as String;
         return MaterialApp(
@@ -24,76 +24,56 @@ class _MyApp extends StatelessWidget {
   }
 }
 
-Future<String> _runTests() async {
+Future<String> _test() async {
   try {
-    await _basicTest();
-    return 'Queue works! 😀';
+    const testLen = 10000;
+    final source = <int>[], target = <int>[];
+
+    final pq = PersistentQueue('pq',
+        flushAt: testLen ~/ 10,
+        maxLength: testLen * 2,
+        onFlush: (list) async =>
+            target.addAll(list.map((v) => v['val'] as int)),
+        onError: _printError,
+        noReload: true);
+
+    for (int i = testLen; i > 0; --i) {
+      final int val = Random().nextInt(4294967295);
+      source.add(val);
+      pq.push(<String, dynamic>{'val': val});
+    }
+    pq.flush();
+    debugPrint('all data pushed and a final flush scheduled');
+
+    bool hasReset = false;
+    pq.reset(() async => hasReset = true);
+    debugPrint('final reset scheduled with control flag');
+
+    // polling until final reset or timeout
+    int oldLen = -1;
+    for (int i = 0; !hasReset && i < 10000; ++i) {
+      if (pq.length != oldLen && pq.length % 10 == 0) {
+        debugPrint('${target.length} - ${pq.length}');
+        oldLen = pq.length;
+      }
+      await Future<void>.delayed(Duration(milliseconds: 1));
+    }
+
+    _assert(pq.length == 0);
+    _assert(target.length == source.length);
+    for (int i = testLen - 1; i >= 0; --i) _assert(source[i] == target[i]);
+    await pq.destroy();
+
+    const msg = 'Queue works! 😀';
+    debugPrint(msg);
+    return msg;
   } catch (e, s) {
-    _onError(e, s);
-    return 'Something went wrong 😤';
+    _printError(e, s);
+    const msg = 'Something went wrong 😤';
+    debugPrint(msg);
+    return msg;
   }
-}
-
-Future<void> _basicTest() async {
-  const testLen = 10000;
-  final source = <int>[], target = <int>[];
-
-  Future<void> onFlush(List<Map<String, dynamic>> list) async {
-    try {
-      debugPrint('regular flush: ${list.length}');
-      target.addAll(list.map((val) => val['val'] as int));
-    } catch(e, s) {
-      _onError(e, s);
-    }
-  }
-
-  final pq = PersistentQueue('pq',
-    flushAt: testLen ~/ 5,
-    onFlush: onFlush,
-    onReset: () async => debugPrint('queue reset!'),
-    maxLength: testLen * 2,
-    onError: _onError,
-    noReload: true);
-
-  for (int i = testLen; i > 0; --i) {
-    final int val = Random().nextInt(4294967296);
-    source.add(val);
-    pq.push(<String, dynamic>{'val': val});
-  }
-  debugPrint('all data pushed');
-
-  Future<void> finalFlush(List<Map<String, dynamic>> list) async {
-    try {
-      debugPrint('final flush: ${list.length}');
-      target.addAll(list.map((val) => val['val'] as int));
-    } catch(e, s) {
-      _onError(e, s);
-    }
-  }
-  pq.flush(finalFlush);
-  debugPrint('final flush scheduled');
-
-  bool hasReset = false;
-  pq.reset(() async => hasReset = true);
-  debugPrint('final reset scheduled');
-
-  // polling
-  int oldLen = -1;
-  for (int i = 0; !hasReset && i < 30000; ++i) {
-    if (pq.length != oldLen && pq.length % 10 == 0) {
-      debugPrint('${target.length} - ${pq.length}');
-      oldLen = pq.length;
-    }
-    await Future<void>.delayed(Duration(milliseconds: 1));
-  }
-
-  _assert(pq.length == 0);
-  _assert(target.length == source.length);
-  for (int i = testLen - 1; i >= 0; --i) _assert(source[i] == target[i]);
-
-  await pq.destroy();
-  debugPrint('queue works!');
 }
 
 void _assert(bool cta) => cta != true ? throw Exception('QueueFailed') : null;
-void _onError(dynamic err, [StackTrace stack]) => debugPrint('$err\n$stack');
+void _printError(dynamic e, [StackTrace stack]) => debugPrint('$e\n$stack');

@@ -78,7 +78,7 @@ class PersistentQueue {
 
   /// push a reset instruction to the end of the buffer
   void reset([OnReset onReset]) {
-    const type =QueueEventType.RESET;
+    const type = QueueEventType.RESET;
     final event = QueueEvent(type, onReset: onReset);
     _buffer.push(event);
   }
