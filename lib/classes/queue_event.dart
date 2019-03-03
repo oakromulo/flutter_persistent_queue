@@ -1,7 +1,7 @@
 /// @nodoc
 // ignore_for_file: public_member_api_docs
 
-import '../typedefs/typedefs.dart';
+import '../typedefs/typedefs.dart' show AsyncFlushFunc, ErrFunc;
 
 class QueueEvent {
   QueueEvent(this.type, {this.item, this.flush, this.onError});
