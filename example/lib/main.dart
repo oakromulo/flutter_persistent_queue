@@ -28,7 +28,7 @@ class _MyApp extends StatelessWidget {
 Future<String> _runTests() async {
   try {
     await _unawaitedTest().timeout(Duration(seconds: 30));
-    await _regularTest().timeout(Duration(seconds: 30));
+    await _sequentialTest().timeout(Duration(seconds: 30));
     const msg = 'Queue works! 😀';
     debugPrint(msg);
     return msg;
@@ -79,7 +79,7 @@ Future<void> _unawaitedTest() async {
   await _finalize(pq, source, target);
 }
 
-Future<void> _regularTest() async {
+Future<void> _sequentialTest() async {
   const testLen = 10000;
   final source = <int>[], target = <int>[];
 
