@@ -2,9 +2,11 @@
 library flutter_persistent_queue;
 
 import 'package:flutter/foundation.dart' show debugPrint;
-import 'package:localstorage/localstorage.dart';
+import 'package:localstorage/localstorage.dart' show LocalStorage;
 
-import './util/buffer.dart';
+import './classes/buffer.dart' show Buffer;
+import './classes/queue_event.dart' show QueueEvent, QueueEventType;
+import './typedefs/typedefs.dart' show AsyncFlushFunc, StorageFunc, ErrFunc;
 
 ///
 class PersistentQueue {
@@ -18,11 +20,11 @@ class PersistentQueue {
       bool noReload = false})
       : _maxLength = maxLength ?? flushAt * 5 {
     // init buffer
-    _buffer = Buffer<_Event>(_onData);
+    _buffer = Buffer<QueueEvent>(_onData);
 
     // start fresh or reload persisted state, according to [noReload]
-    final setupEventType = noReload ? _EventType.RESET : _EventType.RELOAD;
-    _buffer.push(_Event(setupEventType));
+    final initType = noReload ? QueueEventType.RESET : QueueEventType.RELOAD;
+    _buffer.push(QueueEvent(initType));
   }
 
   ///
@@ -43,7 +45,7 @@ class PersistentQueue {
   // max number of queued items, either in-memory or on fs
   final int _maxLength;
 
-  Buffer<_Event> _buffer;
+  Buffer<QueueEvent> _buffer;
   DateTime _deadline;
   int _len = 0;
 
@@ -58,13 +60,15 @@ class PersistentQueue {
     if (_len + _buffer.length + 1 >= _maxLength) {
       throw 'PersistentQueueOverflow';
     }
-    _buffer.push(_Event(_EventType.PUSH, item: item /*, onError: errFunc*/));
+    const type = QueueEventType.PUSH;
+    final event = QueueEvent(type, item: item /*, onError: errFunc*/);
+    _buffer.push(event);
   }
 
   /// push a flush instruction to the end of the event buffer
   void flush([AsyncFlushFunc flushFunc /*, [ErrFunc errFunc]*/]) {
-    const type = _EventType.FLUSH;
-    final event = _Event(type, flush: flushFunc /*, onError: errFunc*/);
+    const type = QueueEventType.FLUSH;
+    final event = QueueEvent(type, flush: flushFunc /*, onError: errFunc*/);
     _buffer.push(event);
   }
 
@@ -73,20 +77,20 @@ class PersistentQueue {
 
   // buffer calls onData every time it's ready to process a new [_Event] and
   // then an event handler method gets executed according to [_Event.type]
-  Future<void> _onData(_Event event) async {
-    if (event.type == _EventType.FLUSH) {
+  Future<void> _onData(QueueEvent event) async {
+    if (event.type == QueueEventType.FLUSH) {
       print('flush request');
       await _onFlush(event);
-    } else if (event.type == _EventType.PUSH) {
+    } else if (event.type == QueueEventType.PUSH) {
       await _onPush(event);
-    } else if (event.type == _EventType.RELOAD) {
+    } else if (event.type == QueueEventType.RELOAD) {
       await _onReload(event);
-    } else if (event.type == _EventType.RESET) {
+    } else if (event.type == QueueEventType.RESET) {
       await _onReset(event);
     }
   }
 
-  Future<void> _onPush(_Event event) async {
+  Future<void> _onPush(QueueEvent event) async {
     try {
       await _write(event.item); // call event.onWrite?
       if (_len == 1) _deadline = _newDeadline(flushTimeout);
@@ -98,7 +102,7 @@ class PersistentQueue {
     }
   }
 
-  Future<void> _onFlush(_Event event) async {
+  Future<void> _onFlush(QueueEvent event) async {
     try {
       print('flush attempt');
       final AsyncFlushFunc _func = event.flush ?? flushFunc;
@@ -111,7 +115,7 @@ class PersistentQueue {
     }
   }
 
-  Future<void> _onReload(_Event event) async {
+  Future<void> _onReload(QueueEvent event) async {
     await _file((LocalStorage storage) async {
       for (_len = 0;; ++_len) {
         if (await storage.getItem('$_len') == null) break;
@@ -120,7 +124,7 @@ class PersistentQueue {
     });
   }
 
-  Future<void> _onReset(_Event event) async {
+  Future<void> _onReset(QueueEvent event) async {
     await _file((LocalStorage storage) async {
       try {
         _len = 0;
@@ -151,7 +155,7 @@ class PersistentQueue {
     });
   }
 
-  Future<void> _file(_StorageFunc inputFunc) async {
+  Future<void> _file(StorageFunc inputFunc) async {
     try {
       final storage = LocalStorage(filename);
       await storage.ready;
@@ -166,21 +170,3 @@ class PersistentQueue {
   bool _isExpired(DateTime deadline) => _nowUtc().isAfter(deadline);
   DateTime _nowUtc() => DateTime.now().toUtc();
 }
-
-class _Event {
-  _Event(this.type, {this.item, this.flush, this.onError});
-  final _EventType type;
-  final Map<String, dynamic> item;
-  final AsyncFlushFunc flush;
-  final ErrFunc onError;
-}
-
-enum _EventType { FLUSH, PUSH, RELOAD, RESET }
-
-/// A spec for optional queue iteration prior to a [PersistentQueue.flush()].
-typedef AsyncFlushFunc = Future<void> Function(List<Map<String, dynamic>>);
-
-///
-typedef ErrFunc = Function(dynamic error, [StackTrace stack]);
-
-typedef _StorageFunc = Future<void> Function(LocalStorage);

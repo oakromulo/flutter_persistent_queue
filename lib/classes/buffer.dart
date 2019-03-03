@@ -1,6 +1,8 @@
+/// @nodoc
+// ignore_for_file: public_member_api_docs
+
 import 'dart:async';
 
-///
 class Buffer<T> {
   ///
   Buffer(Future<void> Function(T) onData) {
