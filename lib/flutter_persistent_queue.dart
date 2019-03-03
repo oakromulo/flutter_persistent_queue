@@ -4,7 +4,7 @@ library flutter_persistent_queue;
 import 'package:flutter/foundation.dart' show debugPrint;
 import 'package:localstorage/localstorage.dart' show LocalStorage;
 
-import './classes/buffer.dart' show Buffer;
+import './classes/queue_buffer.dart' show QueueBuffer;
 import './classes/queue_event.dart' show QueueEvent, QueueEventType;
 import './typedefs/typedefs.dart' show OnFlush, StorageFunc, OnError, OnReset;
 
@@ -21,7 +21,7 @@ class PersistentQueue {
       bool noReload = false})
       : _maxLength = maxLength ?? flushAt * 5 {
     // init buffer
-    _buffer = Buffer<QueueEvent>(_onData);
+    _buffer = QueueBuffer<QueueEvent>(_onData);
 
     // start fresh or reload persisted state, according to [noReload]
     final initType = noReload ? QueueEventType.RESET : QueueEventType.RELOAD;
@@ -49,7 +49,7 @@ class PersistentQueue {
   // max number of queued items, either in-memory or on fs
   final int _maxLength;
 
-  Buffer<QueueEvent> _buffer;
+  QueueBuffer<QueueEvent> _buffer;
   DateTime _deadline;
   int _len = 0;
 

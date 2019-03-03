@@ -3,8 +3,8 @@
 
 import 'dart:async';
 
-class Buffer<T> {
-  Buffer(Future<void> Function(T) onData) {
+class QueueBuffer<T> {
+  QueueBuffer(Future<void> Function(T) onData) {
     _sub = _controller.stream.listen((T event) {
       _sub.pause(onData(event).whenComplete(() => _len--));
     });
