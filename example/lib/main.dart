@@ -52,7 +52,7 @@ Future<void> _unawaitedTest() async {
       maxLength: testLen * 2,
       onFlush: flushAction);
 
-  await pq.flush((_) async => debugPrint('clear queue for unawaited test'));
+  await pq.flush((_) async => debugPrint('queue cleared for unawaited test'));
   for (int i = testLen; i > 0; --i) {
     final v = Random().nextInt(4294967295);
     source.add(v);
@@ -91,7 +91,7 @@ Future<void> _sequentialTest() async {
       maxLength: testLen * 2,
       onFlush: flushAction);
 
-  await pq.flush((_) async => debugPrint('clear queue for sequential test'));
+  await pq.flush((_) async => debugPrint('queue cleared for sequential test'));
   for (int i = testLen; i > 0; --i) {
     final v = Random().nextInt(4294967295);
     source.add(v);
