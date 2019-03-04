@@ -84,9 +84,12 @@ class PersistentQueue {
 
   Future<void> _onPush(QueueEvent event) async {
     try {
-      await _write(event.item);      
-      if (_len >= flushAt || _isExpired(_deadline)) await _onFlush(event);
-      else event.completer.complete();
+      await _write(event.item);
+      if (_len >= flushAt || _isExpired(_deadline)) {
+        await _onFlush(event);
+      } else {
+        event.completer.complete();
+      }
     } catch (e, s) {
       event.completer.completeError(e, s);
     }

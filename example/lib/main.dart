@@ -27,7 +27,7 @@ class _MyApp extends StatelessWidget {
 
 Future<String> _runTests() async {
   try {
-    await _unawaitedTest().timeout(Duration(seconds: 30));
+    await _unawaitTest().timeout(Duration(seconds: 30));
     await _sequentialTest().timeout(Duration(seconds: 30));
     const msg = 'Queue works! 😀';
     debugPrint(msg);
@@ -40,7 +40,7 @@ Future<String> _runTests() async {
   }
 }
 
-Future<void> _unawaitedTest() async {
+Future<void> _unawaitTest() async {
   const testLen = 10000;
   final source = <int>[], target = <int>[];
 
@@ -48,11 +48,9 @@ Future<void> _unawaitedTest() async {
       target.addAll(list.map((v) => v['v'] as int));
 
   final pq = PersistentQueue('_unawaited_test_',
-      flushAt: testLen ~/ 20,
-      maxLength: testLen * 2,
-      onFlush: flushAction);
+      flushAt: testLen ~/ 20, maxLength: testLen * 2, onFlush: flushAction);
 
-  await pq.flush((_) async => debugPrint('queue cleared for unawaited test'));
+  await pq.flush((_) async => debugPrint('queue cleared for unawait test'));
   for (int i = testLen; i > 0; --i) {
     final v = Random().nextInt(4294967295);
     source.add(v);
@@ -61,7 +59,7 @@ Future<void> _unawaitedTest() async {
   debugPrint('all data pushed to queue');
 
   bool hasReset = false;
-  pq.flush((list) => flushAction(list).then((_) { hasReset = true; }));
+  pq.flush((list) => flushAction(list).then((_) => hasReset = true));
   debugPrint('final flush scheduled with control flag');
 
   int oldLen = -1;
@@ -87,11 +85,9 @@ Future<void> _sequentialTest() async {
   }
 
   final pq = PersistentQueue('_regular_test_',
-      flushAt: testLen ~/ 20,
-      maxLength: testLen * 2,
-      onFlush: flushAction);
+      flushAt: testLen ~/ 20, maxLength: testLen * 2, onFlush: flushAction);
 
-  await pq.flush((_) async => debugPrint('queue cleared for sequential test'));
+  await pq.flush((_) async => debugPrint('queue cleared for seq. test'));
   for (int i = testLen; i > 0; --i) {
     final v = Random().nextInt(4294967295);
     source.add(v);
@@ -103,11 +99,14 @@ Future<void> _sequentialTest() async {
   await _finalize(pq, source, target);
 }
 
-Future<void> _finalize(PersistentQueue pq, List<int> source, List<int> target) {
+Future<void> _finalize(PersistentQueue pq, List<int> src, List<int> target) {
   _assert(pq.length == 0);
-  _assert(target.length == source.length);
-  for (int i = source.length - 1; i >= 0; --i) _assert(source[i] == target[i]);
+  _assert(target.length == src.length);
+  for (int i = src.length - 1; i >= 0; --i) _assert(src[i] == target[i]);
   return pq.destroy();
 }
 
-void _assert(bool cta) => cta != true ? throw Exception('QueueFailed') : null;
+void _assert(bool cta) {
+  if (cta == true) return;
+  throw Exception('TestFailed');
+}
