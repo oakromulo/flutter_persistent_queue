@@ -12,14 +12,12 @@ class ExampleApp extends StatelessWidget {
 Future<List<String>> example() async {
   final persistedList = <String>[];
 
-  final pq = PersistentQueue('pq',
-    flushAt: 10,
-    onFlush: (list) async {
-      persistedList.addAll(list.map<String>((v) => '${v['μs']}').toList());
-    }
-  );
+  // instantiate queue and define implicit flush to fill the persistedList
+  final pq = PersistentQueue('pq', flushAt: 10, onFlush: (list) async {
+    persistedList.addAll(list.map<String>((v) => '${v['μs']}').toList());
+  });
 
-  // fill new data to be read next time the app is reloaded
+  // fill new data to be read on next app reload
   for (int i = 0; i < 10; ++i) await pq.push(<String, dynamic>{'μs': us()});
 
   // return old data
