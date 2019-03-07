@@ -1,4 +1,5 @@
-// ignore_for_file: unawaited_futures
+/// @nodoc
+// ignore_for_file: unawaited_futures, public_member_api_docs
 import 'dart:math';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
