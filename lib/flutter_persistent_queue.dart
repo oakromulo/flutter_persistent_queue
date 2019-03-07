@@ -95,30 +95,6 @@ class PersistentQueue {
     }
   }
 
-  Future<void> _onFlush(QueueEvent event) async {
-    try {
-      // run optional flush action
-      final OnFlush _onFlush = event.onFlush ?? onFlush;
-      if (_onFlush != null) await _onFlush(await _toList());
-
-      // clear on success
-      await _onReset(event);
-
-      // acknowledge
-      event.completer.complete();
-    } catch (e, s) {
-      event.completer.completeError(e, s);
-    }
-  }
-
-  // should only be called by _onFlush
-  Future<void> _onReset(QueueEvent event) async {
-    await _file((LocalStorage storage) async {
-      await storage.clear(); // hard clear a bit slow!!
-      _len = 0;
-    });
-  }
-
   // should only be scheduled once at construction-time, first event to run
   Future<void> _onReload(QueueEvent event) async {
     try {
@@ -134,6 +110,22 @@ class PersistentQueue {
     }
   }
 
+  Future<void> _onFlush(QueueEvent event) async {
+    try {
+      // run optional flush action
+      final OnFlush _onFlush = event.onFlush ?? onFlush;
+      if (_onFlush != null) await _onFlush(await _toList());
+
+      // clear on success
+      await _reset(event);
+
+      // acknowledge
+      event.completer.complete();
+    } catch (e, s) {
+      event.completer.completeError(e, s);
+    }
+  }
+
   // should only be called by _onFlush
   Future<List<Map<String, dynamic>>> _toList() async {
     if (_len == null || _len < 1) return [];
@@ -144,6 +136,14 @@ class PersistentQueue {
       }
     });
     return li;
+  }
+
+  // should only be called by _onFlush
+  Future<void> _reset(QueueEvent event) async {
+    await _file((LocalStorage storage) async {
+      await storage.clear(); // hard clear a bit slow!!
+      _len = 0;
+    });
   }
 
   // should only be called by _onPush
