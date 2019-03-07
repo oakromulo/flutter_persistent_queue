@@ -1,0 +1,19 @@
+name: test_app
+description: dummy application to run integration tests
+
+environment:
+  sdk: ">=2.1.0 <3.0.0"
+
+dependencies:
+  flutter:
+    sdk: flutter
+  flutter_persistent_queue:
+    path: ../
+
+dev_dependencies:
+  flutter_driver:
+    sdk: flutter
+  test: any
+
+flutter:
+  uses-material-design: true
