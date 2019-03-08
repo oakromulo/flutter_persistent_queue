@@ -121,10 +121,7 @@ class PersistentQueue {
     try {
       _reloadError = null;
       await _file((LocalStorage storage) async {
-        for (_len = 0;; ++_len) {
-          if (await storage.getItem('$_len') == null) break;
-        }
-        //if (_len > 0) _deadline = _newDeadline(flushTimeout);
+        for (_len = 0; await storage.getItem('$_len') != null; ++_len);
       });
       event.completer.complete(true);
     } catch (e) {

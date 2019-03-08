@@ -17,6 +17,7 @@ Future<List<String>> example() async {
     persistedList.addAll(list.map<String>((v) => '${v['μs']}').toList());
   });
 
+  // optionally await until the queue reloads its persisted state
   await pq.ready;
 
   // fill new data to be read on next app reload
