@@ -81,10 +81,11 @@ queue is fully emptied if and only if the user-defined `onFlush` does not throw
 any errors.
 
 All PersistentQueue methods are consumed sequentially (according to the strict
-chronological order of its calls) one at a time on a dedicated event loop.
+chronological order of its calls) one at a time on a dedicated
+producer / consumer event loop.
 
 Performance of persisted queues on standard simulated devices must be of at
-least 1000 writes/second. This constraint is enforced by integration tests.
+least 1000 writes/second. This constraint is verified on integration tests.
 
 All filesystem and JSON operations are abstracted by the minimalistic
 [flutter_localstorage](https://github.com/lesnitsky/flutter_localstorage)
