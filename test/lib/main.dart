@@ -5,43 +5,75 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_persistent_queue/flutter_persistent_queue.dart';
 
-void main() => runApp(_MyApp());
+void main() => runApp(MyApp());
 
-class _MyApp extends StatelessWidget {
+class MyApp extends StatefulWidget {
+  @override
+  State<StatefulWidget> createState() => _MyAppState();
+}
+
+class _MyAppState extends State<MyApp> {
+  String txt1 = '', txt2 = '';
+  bool unwaitEnabled = true, seqEnabled = true;
+
   @override
   Widget build(BuildContext context) {
-    return FutureBuilder(
-      future: _runTests(),
-      builder: (context, snapshot) {
-        final txt = snapshot.data == null ? 'Wait!' : snapshot.data as String;
-        return MaterialApp(
-          home: Scaffold(
-            body: Center(
-              child: Text(txt),
-            ),
+    return MaterialApp(
+      home: Scaffold(
+        body: Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+            children: <Widget>[
+              Text('UNAWAITED TEST'),
+              Text(txt1, key: Key('txt1')),
+              Divider(),
+              Text('SEQUENTIAL TEST'),
+              Text(txt2, key: Key('txt2'))
+            ],
           ),
-        );
-      },
+        ),
+        appBar: AppBar(title: Text('Load Test')),
+        bottomNavigationBar: BottomAppBar(
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: <Widget>[
+              Text('Unawaited Test'),
+              IconButton(
+                key: Key('unwaited'),
+                icon: Icon(Icons.grade),
+                onPressed: () {
+                  if (!unwaitEnabled) return;
+                  unwaitEnabled = false;
+                  _unawaitTest()
+                    .then((res) => setState(() => txt1 = res))
+                    .timeout(Duration(seconds: 120))
+                    .catchError((dynamic e) => setState(() => txt1 = '$e'))
+                    .whenComplete(() => setState(() => unwaitEnabled = true));
+                }
+              ),
+              Text('Sequential Test'),
+              IconButton(
+                key: Key('sequential'),
+                icon: Icon(Icons.grade),
+                onPressed: () {
+                  if (!seqEnabled) return;
+                  seqEnabled = false;
+                  _sequentialTest()
+                    .then((res) => setState(() => txt2 = res))
+                    .timeout(Duration(seconds: 120))
+                    .catchError((dynamic e) => setState(() => txt2 = '$e'))
+                    .whenComplete(() => setState(() => seqEnabled = true));
+                }
+              )
+            ],
+          )
+        ),
+      ),
     );
   }
 }
 
-Future<String> _runTests() async {
-  try {
-    await _unawaitTest().timeout(Duration(seconds: 120));
-    await _sequentialTest().timeout(Duration(seconds: 120));
-    const msg = 'Queue works! 😀';
-    debugPrint(msg);
-    return msg;
-  } catch (e, s) {
-    debugPrint('$e\n$s');
-    const msg = 'Something went wrong 😤';
-    debugPrint(msg);
-    return msg;
-  }
-}
-
-Future<void> _unawaitTest() async {
+Future<String> _unawaitTest() async {
   const testLen = 10000;
   final source = <int>[], target = <int>[];
 
@@ -75,9 +107,11 @@ Future<void> _unawaitTest() async {
   debugPrint('polling finished');
 
   await _finalize(pq, source, target);
+
+  return 'unawaited test completed succesfully';
 }
 
-Future<void> _sequentialTest() async {
+Future<String> _sequentialTest() async {
   const testLen = 10000;
   final source = <int>[], target = <int>[];
 
@@ -99,6 +133,8 @@ Future<void> _sequentialTest() async {
   debugPrint('queue operations complete');
 
   await _finalize(pq, source, target);
+
+  return 'sequential test completed succesfully';
 }
 
 Future<void> _finalize(PersistentQueue pq, List<int> src, List<int> tgt) async {
