@@ -62,8 +62,8 @@ class PersistentQueue {
   static final _cache = <String, PersistentQueue>{};
 
   QueueBuffer<QueueEvent> _buffer;
+  Exception _errorState;
   Future<bool> _ready;
-  String _reloadError;
   DateTime _deadline;
   int _len = 0;
 
@@ -78,7 +78,7 @@ class PersistentQueue {
 
   ///
   Future<int> get futureLength {
-    _checkReloadError();
+    _checkErrorState();
     const type = QueueEventType.LENGTH;
     final completer = Completer<int>();
     _buffer.push(QueueEvent(type, completer: completer));
@@ -88,7 +88,7 @@ class PersistentQueue {
   ///
   Future<void> push(Map<String, dynamic> item) {
     _checkOverflow();
-    _checkReloadError();
+    _checkErrorState();
     const type = QueueEventType.PUSH;
     final completer = Completer<void>();
     _buffer.push(QueueEvent(type, item: item, completer: completer));
@@ -97,7 +97,7 @@ class PersistentQueue {
 
   /// push a flush instruction to the end of the event buffer
   Future<void> flush([OnFlush onFlush]) {
-    _checkReloadError();
+    _checkErrorState();
     const type = QueueEventType.FLUSH;
     final completer = Completer<void>();
     _buffer.push(QueueEvent(type, onFlush: onFlush, completer: completer));
@@ -106,7 +106,7 @@ class PersistentQueue {
 
   ///
   Future<List<Map<String, dynamic>>> toList({bool growable = true}) {
-    _checkReloadError();
+    _checkErrorState();
     const type = QueueEventType.LIST;
     final completer = Completer<List<Map<String, dynamic>>>();
     _buffer.push(QueueEvent(type, growable: growable, completer: completer));
@@ -155,7 +155,7 @@ class PersistentQueue {
   // should only be scheduled once at construction-time, first event to run
   Future<void> _onReload(QueueEvent event) async {
     try {
-      _reloadError = null;
+      _errorState = null;
       _len = 0;
       if (event.noPersist) {
         await _reset();
@@ -166,7 +166,7 @@ class PersistentQueue {
       }
       event.completer.complete(true);
     } catch (e) {
-      _reloadError = e.toString();
+      _errorState = Exception(e.toString());
       event.completer.complete(false);
     }
   }
@@ -203,8 +203,9 @@ class PersistentQueue {
     try {
       if (event.noPersist) await _reset();
       await _buffer.destroy();
+      _errorState = Exception('Queue Destroyed');
       event.completer.complete();
-    } catch(e, s) {
+    } catch (e, s) {
       print(e.toString());
       event.completer.completeError(e, s);
     }
@@ -224,7 +225,7 @@ class PersistentQueue {
     return li;
   }
 
-  // should only be called by _onFlush
+  // should only be called by _onFlush, _onDestroy
   Future<void> _reset() async {
     await _file((LocalStorage storage) async {
       await storage.clear(); // hard clear a bit slow!!
@@ -246,9 +247,9 @@ class PersistentQueue {
     await inputFunc(storage);
   }
 
-  void _checkReloadError() {
-    if (_reloadError == null) return;
-    throw Exception(_reloadError);
+  void _checkErrorState() {
+    if (_errorState == null) return;
+    throw Exception(_errorState);
   }
 
   void _checkOverflow() {
