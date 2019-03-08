@@ -11,14 +11,10 @@ void main() {
 
     FlutterDriver driver;
 
-    setUpAll(() async {
-      driver = await FlutterDriver.connect();
-    });
+    setUpAll(() async => driver = await FlutterDriver.connect());
 
     tearDownAll(() async {
-      if (driver != null) {
-        await driver.close();
-      }
+      if (driver != null) await driver.close();
     });
 
     test('run sequential test', () async {
@@ -27,7 +23,7 @@ void main() {
       int i = 120;
       bool success = false;
 
-      while(--i > 0) {
+      while (--i > 0) {
         final txt = await driver.getText(txt2Finder);
         if (txt.contains('success')) {
           success = true;
@@ -51,7 +47,7 @@ void main() {
       int i = 1200;
       bool success = false;
 
-      while(--i > 0) {
+      while (--i > 0) {
         final txt = await driver.getText(txt1Finder);
         if (txt.contains('success')) {
           t1 = DateTime.now();
