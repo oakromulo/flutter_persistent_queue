@@ -13,28 +13,34 @@ import './typedefs/typedefs.dart' show OnFlush, StorageFunc;
 class PersistentQueue {
   ///
   factory PersistentQueue(String filename,
-      {OnFlush onFlush, int flushAt, int maxLength}) {
+      {OnFlush onFlush,
+      int flushAt = 100,
+      int maxLength,
+      bool noPersist = false}) {
     if (_cache.containsKey(filename)) return _cache[filename];
 
     final persistentQueue = PersistentQueue._internal(filename,
         onFlush: onFlush,
         flushAt: flushAt,
         //flushTimeout: flushTimeout,
-        maxLength: maxLength);
+        maxLength: maxLength,
+        noPersist: noPersist);
     _cache[filename] = persistentQueue;
     return persistentQueue;
   }
 
   PersistentQueue._internal(this.filename,
       {this.onFlush,
-      this.flushAt = 100,
+      this.flushAt,
       //this.flushTimeout = const Duration(minutes: 5),
-      int maxLength})
+      int maxLength,
+      bool noPersist})
       : _maxLength = maxLength ?? flushAt * 5 {
+    const type = QueueEventType.RELOAD;
     final completer = Completer<bool>();
     _ready = completer.future;
     _buffer = QueueBuffer<QueueEvent>(_onData);
-    _buffer.push(QueueEvent(QueueEventType.RELOAD, completer: completer));
+    _buffer.push(QueueEvent(type, noPersist: noPersist, completer: completer));
   }
 
   ///
@@ -142,9 +148,14 @@ class PersistentQueue {
   Future<void> _onReload(QueueEvent event) async {
     try {
       _reloadError = null;
-      await _file((LocalStorage storage) async {
-        for (_len = 0; await storage.getItem('$_len') != null; ++_len);
-      });
+      _len = 0;
+      if (event.noPersist) {
+        await _reset();
+      } else {
+        await _file((LocalStorage storage) async {
+          while (await storage.getItem('$_len') != null) ++_len;
+        });
+      }
       event.completer.complete(true);
     } catch (e) {
       _reloadError = e.toString();
@@ -171,7 +182,7 @@ class PersistentQueue {
       if (_onFlush != null) await _onFlush(await _toList());
 
       // clear on success
-      await _reset(event);
+      await _reset();
 
       // acknowledge
       event.completer.complete();
@@ -195,7 +206,7 @@ class PersistentQueue {
   }
 
   // should only be called by _onFlush
-  Future<void> _reset(QueueEvent event) async {
+  Future<void> _reset() async {
     await _file((LocalStorage storage) async {
       await storage.clear(); // hard clear a bit slow!!
       _len = 0;
