@@ -31,7 +31,6 @@ class PersistentQueue {
       //this.flushTimeout = const Duration(minutes: 5),
       int maxLength})
       : _maxLength = maxLength ?? flushAt * 5 {
-    
     final completer = Completer<bool>();
     _ready = completer.future;
     _buffer = QueueBuffer<QueueEvent>(_onData);
