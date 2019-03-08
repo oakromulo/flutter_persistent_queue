@@ -4,6 +4,7 @@ import 'dart:math';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_persistent_queue/flutter_persistent_queue.dart';
+import 'package:matcher/matcher.dart';
 
 void main() => runApp(MyApp());
 
@@ -34,40 +35,37 @@ class _MyAppState extends State<MyApp> {
         ),
         appBar: AppBar(title: Text('Load Test')),
         bottomNavigationBar: BottomAppBar(
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: <Widget>[
-              Text('Unawaited Test'),
-              IconButton(
-                key: Key('unwaited'),
+            child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: <Widget>[
+            Text('Unawaited Test'),
+            IconButton(
+                key: Key('unawaited'),
                 icon: Icon(Icons.grade),
                 onPressed: () {
                   if (!unwaitEnabled) return;
                   unwaitEnabled = false;
                   _unawaitTest()
-                    .then((res) => setState(() => txt1 = res))
-                    .timeout(Duration(seconds: 120))
-                    .catchError((dynamic e) => setState(() => txt1 = '$e'))
-                    .whenComplete(() => setState(() => unwaitEnabled = true));
-                }
-              ),
-              Text('Sequential Test'),
-              IconButton(
+                      .then((res) => setState(() => txt1 = res))
+                      .timeout(Duration(seconds: 120))
+                      .catchError((dynamic e) => setState(() => txt1 = '$e'))
+                      .whenComplete(() => setState(() => unwaitEnabled = true));
+                }),
+            Text('Sequential Test'),
+            IconButton(
                 key: Key('sequential'),
                 icon: Icon(Icons.grade),
                 onPressed: () {
                   if (!seqEnabled) return;
                   seqEnabled = false;
                   _sequentialTest()
-                    .then((res) => setState(() => txt2 = res))
-                    .timeout(Duration(seconds: 120))
-                    .catchError((dynamic e) => setState(() => txt2 = '$e'))
-                    .whenComplete(() => setState(() => seqEnabled = true));
-                }
-              )
-            ],
-          )
-        ),
+                      .then((res) => setState(() => txt2 = res))
+                      .timeout(Duration(seconds: 120))
+                      .catchError((dynamic e) => setState(() => txt2 = '$e'))
+                      .whenComplete(() => setState(() => seqEnabled = true));
+                })
+          ],
+        )),
       ),
     );
   }
@@ -108,7 +106,7 @@ Future<String> _unawaitTest() async {
 
   await _finalize(pq, source, target);
 
-  return 'unawaited test completed succesfully';
+  return 'unawaited test completed successfully';
 }
 
 Future<String> _sequentialTest() async {
@@ -134,7 +132,7 @@ Future<String> _sequentialTest() async {
 
   await _finalize(pq, source, target);
 
-  return 'sequential test completed succesfully';
+  return 'sequential test completed successfully';
 }
 
 Future<void> _finalize(PersistentQueue pq, List<int> src, List<int> tgt) async {
