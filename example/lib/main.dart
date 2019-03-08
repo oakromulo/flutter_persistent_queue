@@ -17,6 +17,8 @@ Future<List<String>> example() async {
     persistedList.addAll(list.map<String>((v) => '${v['μs']}').toList());
   });
 
+  await pq.ready;
+
   // fill new data to be read on next app reload
   for (int i = 0; i < 10; ++i) await pq.push(<String, dynamic>{'μs': us()});
 

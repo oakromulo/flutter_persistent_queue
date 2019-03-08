@@ -31,9 +31,11 @@ class PersistentQueue {
       //this.flushTimeout = const Duration(minutes: 5),
       int maxLength})
       : _maxLength = maxLength ?? flushAt * 5 {
-    //print(flushTimeout);
+    
+    final completer = Completer<bool>();
+    _ready = completer.future;
     _buffer = QueueBuffer<QueueEvent>(_onData);
-    _buffer.push(QueueEvent(QueueEventType.RELOAD));
+    _buffer.push(QueueEvent(QueueEventType.RELOAD, completer: completer));
   }
 
   ///
@@ -54,6 +56,7 @@ class PersistentQueue {
   static final _cache = <String, PersistentQueue>{};
 
   QueueBuffer<QueueEvent> _buffer;
+  Future<bool> _ready;
   String _reloadError;
   //DateTime _deadline;
   int _len = 0;
@@ -63,6 +66,9 @@ class PersistentQueue {
 
   /// the current number of in-memory elements
   int get bufferLength => _buffer.length;
+
+  ///
+  Future<bool> get ready => _ready;
 
   ///
   Future<void> push(Map<String, dynamic> item) {
@@ -121,8 +127,10 @@ class PersistentQueue {
         }
         //if (_len > 0) _deadline = _newDeadline(flushTimeout);
       });
+      event.completer.complete(true);
     } catch (e) {
       _reloadError = e.toString();
+      event.completer.complete(false);
     }
   }
 
