@@ -113,14 +113,21 @@ class PersistentQueue {
     return completer.future;
   }
 
-  /// deallocates queue resources (data already on the fs persists)
-  Future<void> destroy() => _buffer.destroy();
+  /// deallocates queue resources
+  Future<void> destroy({bool noPersist = false}) {
+    const type = QueueEventType.DESTROY;
+    final completer = Completer<void>();
+    _buffer.push(QueueEvent(type, noPersist: noPersist, completer: completer));
+    return completer.future;
+  }
 
   // buffer calls onData every time it's ready to process a new [_Event] and
   // then an event handler method gets executed according to [_Event.type]
   Future<void> _onData(QueueEvent event) async {
     if (event.type == QueueEventType.FLUSH) {
       await _onFlush(event);
+    } else if (event.type == QueueEventType.DESTROY) {
+      await _onDestroy(event);
     } else if (event.type == QueueEventType.LENGTH) {
       _onLength(event);
     } else if (event.type == QueueEventType.LIST) {
@@ -192,9 +199,20 @@ class PersistentQueue {
     }
   }
 
+  Future<void> _onDestroy(QueueEvent event) async {
+    try {
+      if (event.noPersist) await _reset();
+      await _buffer.destroy();
+      event.completer.complete();
+    } catch(e, s) {
+      print(e.toString());
+      event.completer.completeError(e, s);
+    }
+  }
+
   void _onLength(QueueEvent event) => event.completer.complete(_len);
 
-  // should only be called by _onFlush and _onList
+  // should only be called by _onFlush, _onList, _onDestroy
   Future<List<Map<String, dynamic>>> _toList() async {
     if (_len == null || _len < 1) return [];
     final li = List<Map<String, dynamic>>(_len);

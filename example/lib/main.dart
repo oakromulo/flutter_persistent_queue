@@ -38,6 +38,9 @@ Future<List<String>> example() async {
     items written to the queue: $pushCnt
   ''');
 
+  await pq.destroy();
+  print('the queue is gone');
+
   // forward all strings loaded from the queue to the UI
   return persistedValues.toList(growable: false)..sort();
 }

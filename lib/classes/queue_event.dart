@@ -14,4 +14,4 @@ class QueueEvent {
   final bool growable, noPersist;
 }
 
-enum QueueEventType { FLUSH, LENGTH, LIST, PUSH, RELOAD }
+enum QueueEventType { FLUSH, DESTROY, LENGTH, LIST, PUSH, RELOAD }
