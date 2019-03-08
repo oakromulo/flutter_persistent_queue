@@ -20,7 +20,7 @@ Future<List<String>> example() async {
   // optionally await until the queue reloads its persisted state
   await pq.ready;
 
-  // fill new data to be read on next app reload
+  // fill fresh data to be read on next app reload
   for (int i = 0; i < 10; ++i) await pq.push(<String, dynamic>{'μs': us()});
 
   // return old data
