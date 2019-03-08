@@ -16,13 +16,14 @@ class PersistentQueue {
       {OnFlush onFlush,
       int flushAt = 100,
       int maxLength,
-      bool noPersist = false}) {
+      bool noPersist = false,
+      Duration flushTimeout = const Duration(minutes: 5)}) {
     if (_cache.containsKey(filename)) return _cache[filename];
 
     final persistentQueue = PersistentQueue._internal(filename,
         onFlush: onFlush,
         flushAt: flushAt,
-        //flushTimeout: flushTimeout,
+        flushTimeout: flushTimeout,
         maxLength: maxLength,
         noPersist: noPersist);
     _cache[filename] = persistentQueue;
@@ -32,7 +33,7 @@ class PersistentQueue {
   PersistentQueue._internal(this.filename,
       {this.onFlush,
       this.flushAt,
-      //this.flushTimeout = const Duration(minutes: 5),
+      this.flushTimeout,
       int maxLength,
       bool noPersist})
       : _maxLength = maxLength ?? flushAt * 5 {
@@ -53,7 +54,7 @@ class PersistentQueue {
   final int flushAt;
 
   ///
-  //final Duration flushTimeout;
+  final Duration flushTimeout;
 
   // max number of queued items, either in-memory or on fs
   final int _maxLength;
@@ -63,7 +64,7 @@ class PersistentQueue {
   QueueBuffer<QueueEvent> _buffer;
   Future<bool> _ready;
   String _reloadError;
-  //DateTime _deadline;
+  DateTime _deadline;
   int _len = 0;
 
   /// the current number of elements in non-volatile storage
@@ -134,7 +135,7 @@ class PersistentQueue {
   Future<void> _onPush(QueueEvent event) async {
     try {
       await _write(event.item);
-      if (_len >= flushAt /*|| _isExpired(_deadline)*/) {
+      if (_len >= flushAt || _expiredTimeout()) {
         await _onFlush(event);
       } else {
         event.completer.complete();
@@ -217,8 +218,7 @@ class PersistentQueue {
   Future<void> _write(Map<String, dynamic> value) async {
     await _file((LocalStorage storage) async {
       await storage.setItem('$_len', value);
-      _len++;
-      //if (_len == 1) _deadline = _newDeadline(flushTimeout);
+      if (++_len == 1) _resetDeadline();
     });
   }
 
@@ -238,7 +238,7 @@ class PersistentQueue {
     throw Exception('QueueOverflow');
   }
 
-  //DateTime _newDeadline(Duration flushTimeout) => _nowUtc().add(flushTimeout);
-  //bool _isExpired(DateTime deadline) => _nowUtc().isAfter(deadline);
-  //DateTime _nowUtc() => DateTime.now().toUtc();
+  void _resetDeadline() => _deadline = _nowUtc().add(flushTimeout);
+  bool _expiredTimeout() => _deadline != null && _nowUtc().isAfter(_deadline);
+  DateTime _nowUtc() => DateTime.now().toUtc();
 }
