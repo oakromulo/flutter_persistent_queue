@@ -203,6 +203,7 @@ class PersistentQueue {
     try {
       if (event.noPersist) await _reset();
       await _buffer.destroy();
+      _cache.remove(filename);
       _errorState = Exception('Queue Destroyed');
       event.completer.complete();
     } catch (e, s) {
