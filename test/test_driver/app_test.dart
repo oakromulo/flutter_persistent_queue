@@ -1,4 +1,5 @@
 import 'package:flutter_driver/flutter_driver.dart';
+import 'package:matcher/matcher.dart';
 import 'package:test/test.dart';
 
 void main() {
