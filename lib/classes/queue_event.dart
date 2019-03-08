@@ -5,11 +5,13 @@ import 'dart:async' show Completer;
 import '../typedefs/typedefs.dart' show OnFlush;
 
 class QueueEvent {
-  QueueEvent(this.type, {this.completer, this.item, this.onFlush});
+  QueueEvent(this.type,
+      {this.completer, this.item, this.onFlush, this.growable});
   final QueueEventType type;
   final Completer<dynamic> completer;
   final Map<String, dynamic> item;
   final OnFlush onFlush;
+  final bool growable;
 }
 
-enum QueueEventType { FLUSH, LENGTH, PUSH, RELOAD }
+enum QueueEventType { FLUSH, LENGTH, LIST, PUSH, RELOAD }

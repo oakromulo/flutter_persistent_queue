@@ -2,29 +2,51 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_persistent_queue/flutter_persistent_queue.dart';
 
+Future<List<String>> example() async {
+  final persistedValues = Set<String>();
+  int initCnt, autoFlushCnt = 0, pushCnt = 0;
+
+  List<String> strListFromMapList(List<Map<String, dynamic>> list) =>
+      list.map<String>((v) => '${v['μs']}').toList();
+
+  // instantiate queue and define implicit flush to fill persistedValues
+  final pq = PersistentQueue('pq', flushAt: 12, onFlush: (list) async {
+    persistedValues.addAll(strListFromMapList(list));
+    autoFlushCnt += list.length;
+  });
+
+  // print the number of persisted items from previous run
+  await pq.ready.then((_) => initCnt = pq.length);
+
+  // read old elements before adding new ones, without dequeueing
+  persistedValues.addAll(strListFromMapList(await pq.toList(growable: false)));
+
+  // enqueue a pseudo-random amount of new items to the queue, without awaiting
+  for (int i = 0; i < 36; ++i) {
+    final int microseconds = DateTime.now().microsecondsSinceEpoch;
+    if (microseconds % 10 > 0) continue;
+    pq.push(<String, dynamic>{'μs': '$microseconds'});
+    ++pushCnt;
+  }
+
+  // print execution stats before destroying the queue
+  print('''\t
+    items reloaded from previous run: $initCnt
+    items to persist until next run: ${await pq.futureLength}
+    items read from the queue: ${persistedValues.length}
+    items flushed from the queue: $autoFlushCnt
+    items written to the queue: $pushCnt
+  ''');
+
+  // forward all strings loaded from the queue to the UI
+  return persistedValues.toList(growable: false)..sort();
+}
+
 void main() => runApp(ExampleApp());
 
 class ExampleApp extends StatelessWidget {
   @override
   Widget build(_) => FutureBuilder(future: example(), builder: app);
-}
-
-Future<List<String>> example() async {
-  final persistedList = <String>[];
-
-  // instantiate queue and define implicit flush to fill the persistedList
-  final pq = PersistentQueue('pq', flushAt: 10, onFlush: (list) async {
-    persistedList.addAll(list.map<String>((v) => '${v['μs']}').toList());
-  });
-
-  // optionally await until the queue reloads its persisted state
-  await pq.ready;
-
-  // fill fresh data to be read on next app reload
-  for (int i = 0; i < 10; ++i) await pq.push(<String, dynamic>{'μs': us()});
-
-  // return old data
-  return persistedList;
 }
 
 Widget app(BuildContext context, AsyncSnapshot<dynamic> snapshot) =>
@@ -40,5 +62,3 @@ Widget body(AsyncSnapshot<dynamic> snapshot) {
   }).toList();
   return ListView(children: children);
 }
-
-String us() => DateTime.now().microsecondsSinceEpoch.toString();

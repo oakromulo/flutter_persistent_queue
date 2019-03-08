@@ -97,6 +97,15 @@ class PersistentQueue {
     return completer.future;
   }
 
+  ///
+  Future<List<Map<String, dynamic>>> toList({bool growable = true}) {
+    _checkReloadError();
+    const type = QueueEventType.LIST;
+    final completer = Completer<List<Map<String, dynamic>>>();
+    _buffer.push(QueueEvent(type, growable: growable, completer: completer));
+    return completer.future;
+  }
+
   /// deallocates queue resources (data already on the fs persists)
   Future<void> destroy() => _buffer.destroy();
 
@@ -107,6 +116,8 @@ class PersistentQueue {
       await _onFlush(event);
     } else if (event.type == QueueEventType.LENGTH) {
       _onLength(event);
+    } else if (event.type == QueueEventType.LIST) {
+      await _onList(event);
     } else if (event.type == QueueEventType.PUSH) {
       await _onPush(event);
     } else if (event.type == QueueEventType.RELOAD) {
@@ -133,14 +144,23 @@ class PersistentQueue {
       _reloadError = null;
       await _file((LocalStorage storage) async {
         for (_len = 0; await storage.getItem('$_len') != null; ++_len);
-        /*for (_len = 0; ; ++_len) {
-          if (await storage.getItem('$_len') == null) break;
-        }*/
       });
       event.completer.complete(true);
     } catch (e) {
       _reloadError = e.toString();
       event.completer.complete(false);
+    }
+  }
+
+  Future<void> _onList(QueueEvent event) async {
+    try {
+      List<Map<String, dynamic>> list = await _toList();
+      if (event.growable) {
+        list = List<Map<String, dynamic>>.from(list, growable: true);
+      }
+      event.completer.complete(list);
+    } catch (e, s) {
+      event.completer.completeError(e, s);
     }
   }
 
@@ -162,7 +182,7 @@ class PersistentQueue {
 
   void _onLength(QueueEvent event) => event.completer.complete(_len);
 
-  // should only be called by _onFlush
+  // should only be called by _onFlush and _onList
   Future<List<Map<String, dynamic>>> _toList() async {
     if (_len == null || _len < 1) return [];
     final li = List<Map<String, dynamic>>(_len);
