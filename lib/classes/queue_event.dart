@@ -12,4 +12,4 @@ class QueueEvent {
   final OnFlush onFlush;
 }
 
-enum QueueEventType { FLUSH, PUSH, RELOAD }
+enum QueueEventType { FLUSH, LENGTH, PUSH, RELOAD }

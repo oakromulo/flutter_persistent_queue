@@ -65,9 +65,10 @@ Future<void> _unawaitTest() async {
 
   int oldLen = -1;
   while (!hasReset) {
-    if (pq.length != oldLen && pq.length % 100 == 0) {
+    final int currLen = pq.length;
+    if (currLen != oldLen && currLen % 100 == 0) {
       debugPrint('polling: ${target.length} - ${pq.length}');
-      oldLen = pq.length;
+      oldLen = currLen;
     }
     await Future<void>.delayed(Duration(microseconds: 100));
   }
@@ -100,11 +101,11 @@ Future<void> _sequentialTest() async {
   await _finalize(pq, source, target);
 }
 
-Future<void> _finalize(PersistentQueue pq, List<int> src, List<int> target) {
+Future<void> _finalize(PersistentQueue pq, List<int> src, List<int> tgt) async {
   _assert(pq.length == 0);
-  _assert(target.length == src.length);
-  for (int i = src.length - 1; i >= 0; --i) _assert(src[i] == target[i]);
-  return pq.destroy();
+  _assert(tgt.length == src.length);
+  for (int i = src.length - 1; i >= 0; --i) _assert(src[i] == tgt[i]);
+  await pq.destroy();
 }
 
 void _assert(bool cta) {

@@ -70,6 +70,15 @@ class PersistentQueue {
   Future<bool> get ready => _ready;
 
   ///
+  Future<int> get futureLength {
+    _checkReloadError();
+    const type = QueueEventType.LENGTH;
+    final completer = Completer<int>();
+    _buffer.push(QueueEvent(type, completer: completer));
+    return completer.future;
+  }
+
+  ///
   Future<void> push(Map<String, dynamic> item) {
     _checkOverflow();
     _checkReloadError();
@@ -96,6 +105,8 @@ class PersistentQueue {
   Future<void> _onData(QueueEvent event) async {
     if (event.type == QueueEventType.FLUSH) {
       await _onFlush(event);
+    } else if (event.type == QueueEventType.LENGTH) {
+      _onLength(event);
     } else if (event.type == QueueEventType.PUSH) {
       await _onPush(event);
     } else if (event.type == QueueEventType.RELOAD) {
@@ -122,6 +133,9 @@ class PersistentQueue {
       _reloadError = null;
       await _file((LocalStorage storage) async {
         for (_len = 0; await storage.getItem('$_len') != null; ++_len);
+        /*for (_len = 0; ; ++_len) {
+          if (await storage.getItem('$_len') == null) break;
+        }*/
       });
       event.completer.complete(true);
     } catch (e) {
@@ -145,6 +159,8 @@ class PersistentQueue {
       event.completer.completeError(e, s);
     }
   }
+
+  void _onLength(QueueEvent event) => event.completer.complete(_len);
 
   // should only be called by _onFlush
   Future<List<Map<String, dynamic>>> _toList() async {
@@ -187,7 +203,7 @@ class PersistentQueue {
   }
 
   void _checkOverflow() {
-    if (_len + _buffer.length <= _maxLength) return;
+    if (_len + _buffer.length - 1 <= _maxLength) return;
     throw Exception('QueueOverflow');
   }
 
