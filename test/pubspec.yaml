@@ -1,5 +1,5 @@
 name: test_app
-description: dummy application to run integration tests
+description: dummy app for integration tests
 
 environment:
   sdk: ">=2.1.0 <3.0.0"
