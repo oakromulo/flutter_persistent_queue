@@ -1,10 +1,20 @@
+/// A simple file-based non-volatile persistent queue library for flutter.
+/// 
+/// Typical use-case scenario is for small to medium sized in-device buffers
+/// storing persistent yet temporary mission-critical data, until it can be
+/// efficiently and safely consumed / delivered permanently - such as for
+/// custom analytics and specialized logging applications.
+/// 
+/// The current implementation is minimalist by design and only supports a
+/// very minimal subset of methods. All methods calls are buffered and
+/// executed sequentially on an isolated event loop per queue.
 ///
+/// p.s. not a [`dart:collection`](
+/// https://pub.dartlang.org/documentation/collection/latest/)
 library flutter_persistent_queue;
 
 import 'dart:async' show Completer;
-
 import 'package:localstorage/localstorage.dart' show LocalStorage;
-
 import './classes/queue_buffer.dart' show QueueBuffer;
 import './classes/queue_event.dart' show QueueEvent, QueueEventType;
 import './typedefs/typedefs.dart' show OnFlush, StorageFunc;
