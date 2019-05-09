@@ -60,7 +60,7 @@ void main() {
 
       final tput = testLen / t1.difference(t0).inSeconds;
       print('throughput: ${tput.toStringAsFixed(2)}');
-      expect(tput, greaterThan(1000.0));
+      expect(tput, greaterThan(500.0));
     });
   });
 }

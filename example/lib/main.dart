@@ -3,7 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_persistent_queue/flutter_persistent_queue.dart';
 
 Future<List<String>> example() async {
-  final persistedValues = Set<String>();
+  final persistedValues = <String>{};
   int initCnt, autoFlushCnt = 0, pushCnt = 0;
 
   List<String> strListFromMapList(List<Map<String, dynamic>> list) =>
