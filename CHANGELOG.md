@@ -1,3 +1,6 @@
+## [1.0.2] - 2019-05-09
+- updated documentation
+
 ## [1.0.1] - 2019-05-09
 - minor source code whitespace fix
 
