@@ -1,8 +1,7 @@
-/// @nodoc
 // ignore_for_file: public_member_api_docs
-
 import 'dart:async';
 
+/// @nodoc
 class QueueBuffer<T> {
   QueueBuffer(Future<void> Function(T) onData) {
     _sub = _controller.stream.listen((T event) {

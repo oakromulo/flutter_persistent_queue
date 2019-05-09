@@ -85,7 +85,7 @@ chronological order of its calls) one at a time on a dedicated
 producer / consumer event loop.
 
 Performance of persisted queues on standard simulated devices must be of at
-least 1000 writes/second. This constraint is verified on integration tests.
+least 500 writes/second. This constraint is verified on integration tests.
 
 All filesystem and JSON operations are abstracted by the minimalistic
 [flutter_localstorage](https://github.com/lesnitsky/flutter_localstorage)

@@ -1,5 +1,5 @@
 name: test_app
-description: "dummy app for integration tests: `flutter drive --target=test_driver/app.dart`"
+description: dummy app for integration tests
 
 environment:
   sdk: ">=2.2.0 <3.0.0"

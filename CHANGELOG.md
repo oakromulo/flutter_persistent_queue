@@ -1,3 +1,9 @@
+## [1.0.0] - 2019-05-09
+
+- new buffered implementation to enforce sequential behavior, introducing
+a few breaking changes
+- integration tests added, with throughput performance benchmarking
+
 ## [0.1.4] - 2019-02-27
 
 - bump [synchronized](https://pub.dartlang.org/packages/synchronized) to 
