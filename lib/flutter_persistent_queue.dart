@@ -1,10 +1,10 @@
 /// A simple file-based non-volatile persistent queue library for flutter.
-/// 
+///
 /// Typical use-case scenario is for small to medium sized in-device buffers
 /// storing persistent yet temporary mission-critical data, until it can be
 /// efficiently and safely consumed / delivered permanently - such as for
 /// custom analytics and specialized logging applications.
-/// 
+///
 /// The current implementation is minimalist by design and only supports a
 /// very minimal subset of methods. All methods calls are buffered and
 /// executed sequentially on an isolated event loop per queue.
@@ -22,7 +22,7 @@ class PersistentQueue {
   ///
   /// A [filename], not a `filepath`, is the only required parameter. It's used
   /// internally as a key for the persistent queue.
-  /// 
+  ///
   /// The optional [filepath] is used to enforce a directory to store the queue
   /// named/keyed defined by [filename]. It defaults to the platform-specific
   /// application document directory.
@@ -33,13 +33,13 @@ class PersistentQueue {
   ///
   /// The [flushAt] and [flushTimeout] parameters specify trigger conditions
   /// for firing automatic implicit [flush()] operations.
-  /// 
+  ///
   /// [flushAt] establishes a desired target ceiling for locally store items,
   /// with a default of `100`. It's also possible to set a [flushTimeout]
   /// for a time-based [flush()] trigger, with a default [Duration] of 5
   /// minutes. Both parameters can only be bypassed by setting very large
   /// values, by design.
-  /// 
+  ///
   /// Setting [maxLength] causes the queue to throw exceptions at [push] time
   /// when the queue internally holds more elements than this hard maximum. By
   /// default it's calculated as 5 times the size of [flushAt].
@@ -53,7 +53,6 @@ class PersistentQueue {
       int maxLength,
       bool noPersist = false,
       Duration flushTimeout = const Duration(minutes: 5)}) {
-
     // return a previously cached PersistentQueue whenever a previous intance
     // existed under the same filename for the same execution run
     if (_cache.containsKey(filename)) {
@@ -104,12 +103,12 @@ class PersistentQueue {
   }
 
   /// Permanent storage extensionless destination filename.
-  /// 
+  ///
   /// p.s. also used as caching key to avoid conflicting  re-instantiations.
   final String filename;
 
   /// Optional [String] to enforce a certain device path to store the queue.
-  /// 
+  ///
   /// p.s. defaults to the platform-specific application document directory.
   final String filepath;
 
@@ -142,7 +141,7 @@ class PersistentQueue {
   // auto-flush gets triggered
   DateTime _deadline;
 
-  // internal counter of queued elements  
+  // internal counter of queued elements
   int _len = 0;
 
   /// the current number of elements in non-volatile storage
@@ -159,7 +158,7 @@ class PersistentQueue {
     _checkErrorState();
 
     const type = QueueEventType.LENGTH;
-    final completer = Completer<int>();  
+    final completer = Completer<int>();
     _buffer.push(QueueEvent(type, completer: completer));
 
     return completer.future;
@@ -178,7 +177,7 @@ class PersistentQueue {
   }
 
   /// Manually push a flush instruction to happen after current buffer clears.
-  /// 
+  ///
   /// Optional handler callback [OnFlush] [onFlush] is called when it completes.
   Future<void> flush([OnFlush onFlush]) {
     _checkErrorState();
@@ -248,7 +247,7 @@ class PersistentQueue {
     try {
       _errorState = null;
       _len = 0;
-  
+
       if (event.noPersist) {
         await _reset();
       } else {
@@ -336,15 +335,15 @@ class PersistentQueue {
     if (_len == null || _len < 1) {
       return [];
     }
-  
+
     final li = List<Map<String, dynamic>>(_len);
-  
+
     await _file((LocalStorage storage) async {
       for (int k = 0; k < _len; ++k) {
         li[k] = await storage.getItem('$k') as Map<String, dynamic>;
       }
     });
-  
+
     return li;
   }
 
@@ -380,7 +379,7 @@ class PersistentQueue {
     if (_errorState == null) {
       return;
     }
-  
+
     throw Exception(_errorState);
   }
 
@@ -389,7 +388,7 @@ class PersistentQueue {
     if (_len + _buffer.length - 1 <= _maxLength) {
       return;
     }
-  
+
     throw Exception('QueueOverflow');
   }
 
