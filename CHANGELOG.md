@@ -1,3 +1,6 @@
+## [1.0.1] - 2019-05-09
+- minor source code whitespace fix
+
 ## [1.0.0] - 2019-05-09
 
 - new buffered implementation to enforce sequential behavior, introducing
