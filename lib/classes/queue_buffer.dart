@@ -1,8 +1,4 @@
 // ignore_for_file: public_member_api_docs
-
-/// @nodoc
-library _queue_buffer;
-
 import 'dart:async';
 
 /// @nodoc
