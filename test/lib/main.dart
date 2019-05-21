@@ -44,7 +44,7 @@ class _MyAppState extends State<MyApp> {
                 onPressed: () {
                   if (!unwaitEnabled) return;
                   unwaitEnabled = false;
-                  _unawaitTest()
+                  _unawaitedTest()
                       .then((res) => setState(() => txt1 = res))
                       .timeout(Duration(seconds: 120))
                       .catchError((dynamic e) => setState(() => txt1 = '$e'))
@@ -70,7 +70,7 @@ class _MyAppState extends State<MyApp> {
   }
 }
 
-Future<String> _unawaitTest() async {
+Future<String> _unawaitedTest() async {
   const testLen = 10000;
   final source = <int>[], target = <int>[];
 
@@ -89,17 +89,16 @@ Future<String> _unawaitTest() async {
   debugPrint('all data pushed to queue');
 
   bool hasReset = false;
-  pq.flush((list) => flushAction(list).then((_) => hasReset = true));
+  pq.flush((list) => flushAction(list).then((_) {
+        hasReset = true;
+        debugPrint('queue flushed: $testLen items');
+      }));
   debugPrint('final flush scheduled with control flag');
 
-  int oldLen = -1;
   while (!hasReset) {
-    final int currLen = pq.length;
-    if (currLen != oldLen && currLen % 100 == 0) {
-      debugPrint('polling: ${target.length} - ${pq.length}');
-      oldLen = currLen;
-    }
-    await Future<void>.delayed(Duration(microseconds: 100));
+    debugPrint('1s polling');
+
+    await Future<void>.delayed(Duration(seconds: 1));
   }
   debugPrint('polling finished');
 
@@ -121,11 +120,15 @@ Future<String> _sequentialTest() async {
       flushAt: testLen ~/ 20, maxLength: testLen * 2, onFlush: flushAction);
 
   await pq.flush((_) async => debugPrint('queue cleared for seq. test'));
+
   for (int i = testLen; i > 0; --i) {
     final v = Random().nextInt(4294967295);
+
     source.add(v);
+
     await pq.push(<String, dynamic>{'v': v});
   }
+
   await pq.flush();
   debugPrint('queue operations complete');
 
@@ -135,13 +138,20 @@ Future<String> _sequentialTest() async {
 }
 
 Future<void> _finalize(PersistentQueue pq, List<int> src, List<int> tgt) async {
-  _assert(pq.length == 0);
+  _assert((await pq.length) == 0);
   _assert(tgt.length == src.length);
-  for (int i = src.length - 1; i >= 0; --i) _assert(src[i] == tgt[i]);
+
+  for (int i = src.length - 1; i >= 0; --i) {
+    _assert(src[i] == tgt[i]);
+  }
+
   await pq.destroy();
 }
 
 void _assert(bool cta) {
-  if (cta == true) return;
+  if (cta == true) {
+    return;
+  }
+
   throw Exception('TestFailed');
 }

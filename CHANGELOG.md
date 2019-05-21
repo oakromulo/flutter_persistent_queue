@@ -1,3 +1,10 @@
+## [2.0.1] - 2019-05-21
+- alias feature added
+- cleaner example and tests
+- updated `localstorage` to v2.0.0
+- breaking change: `length()` method now returns `Future<int>` to avoid
+ambiguity and edgy race conditions
+
 ## [1.0.2] - 2019-05-09
 - updated documentation
 
@@ -6,9 +13,8 @@
 
 ## [1.0.0] - 2019-05-09
 
-- new buffered implementation to enforce sequential behavior, introducing
-a few breaking changes
-- integration tests added, with throughput performance benchmarking
+- new buffered implementation to enforce sequential behavior
+- integration tests added, including throughput performance benchmarking
 
 ## [0.1.4] - 2019-02-27
 

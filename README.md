@@ -14,7 +14,7 @@ Add dependency to `pubspec.yaml`:
 ```yaml
 dependencies:
   ...
-  flutter_persistent_queue: ^1.0.2
+  flutter_persistent_queue: ^2.0.1
 ```
 
 Run in your terminal:
@@ -56,6 +56,12 @@ For integration / performance tests:
 git clone https://github.com/oakromulo/flutter_persistent_queue.git
 cd ~/flutter_persistent_queue/test
 flutter drive --target=test_driver/app.dart
+```
+
+## Building documentation files
+```sh
+rm -rf doc
+dartdoc --exclude 'dart:async,dart:collection,dart:convert,dart:core,dart:developer,dart:io,dart:isolate,dart:math,dart:typed_data,dart:ui'
 ```
 
 ## How it works
