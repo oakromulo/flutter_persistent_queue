@@ -1,3 +1,6 @@
+## [2.0.1+1] - 2019-05-21
+- rebuilt docs
+
 ## [2.0.1] - 2019-05-21
 - alias feature added
 - cleaner example and tests
