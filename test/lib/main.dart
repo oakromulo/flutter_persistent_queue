@@ -74,13 +74,25 @@ Future<String> _unawaitedTest() async {
   const testLen = 10000;
   final source = <int>[], target = <int>[];
 
-  Future<void> flushAction(List<Map<String, dynamic>> list) async =>
+  Future<bool> flushAction(List<Map<String, dynamic>> list) async {
+    try {
       target.addAll(list.map((v) => v['v'] as int));
+
+      return true;
+    } catch (_) {
+      return false;
+    }
+  }
 
   final pq = PersistentQueue('_unawaited_test_',
       flushAt: testLen ~/ 20, maxLength: testLen * 2, onFlush: flushAction);
 
-  await pq.flush((_) async => debugPrint('queue cleared for unawait test'));
+  await pq.flush((_) async {
+    debugPrint('queue cleared for unawait test');
+
+    return true;
+  });
+
   for (int i = testLen; i > 0; --i) {
     final v = Random().nextInt(4294967295);
     source.add(v);
@@ -111,15 +123,25 @@ Future<String> _sequentialTest() async {
   const testLen = 10000;
   final source = <int>[], target = <int>[];
 
-  Future<void> flushAction(List<Map<String, dynamic>> list) async {
-    target.addAll(list.map((v) => v['v'] as int));
-    debugPrint('flush: ${target.length} / $testLen');
+  Future<bool> flushAction(List<Map<String, dynamic>> list) async {
+    try {
+      target.addAll(list.map((v) => v['v'] as int));
+      debugPrint('flush: ${target.length} / $testLen');
+
+      return true;
+    } catch (_) {
+      return false;
+    }
   }
 
   final pq = PersistentQueue('_regular_test_',
       flushAt: testLen ~/ 20, maxLength: testLen * 2, onFlush: flushAction);
 
-  await pq.flush((_) async => debugPrint('queue cleared for seq. test'));
+  await pq.flush((_) async {
+    debugPrint('queue cleared for seq. test');
+
+    return true;
+  });
 
   for (int i = testLen; i > 0; --i) {
     final v = Random().nextInt(4294967295);

@@ -2,7 +2,7 @@ name: flutter_persistent_queue
 description: >
   Simple file-based non-volatile persistent queue implementation for flutter.
   Ideal for in-device sequential buffers that must persist between app runs.
-version: 2.0.1+2
+version: 3.0.0
 author: Romulo Carvalho <oakromulo@gmail.com>
 homepage: https://github.com/oakromulo/flutter_persistent_queue
 repository: https://github.com/oakromulo/flutter_persistent_queue.git

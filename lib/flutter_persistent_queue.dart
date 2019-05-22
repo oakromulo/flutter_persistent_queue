@@ -11,7 +11,9 @@
 library flutter_persistent_queue;
 
 import 'dart:async' show Completer;
+
 import 'package:localstorage/localstorage.dart' show LocalStorage;
+
 import './classes/queue_buffer.dart' show QueueBuffer;
 import './classes/queue_event.dart' show QueueEvent, QueueEventType;
 import './typedefs/typedefs.dart' show OnFlush;
@@ -29,7 +31,8 @@ class PersistentQueue {
   ///
   /// An optional [OnFlush] [onFlush] handler can be supplied at construction
   /// time, to be called implicitly before each [flush()] operation emptying
-  /// the queue.
+  /// the queue. When [onFlush] is provided the queue only flushes if the
+  /// handler returns `true`.
   ///
   /// The [flushAt] and [flushTimeout] parameters specify trigger conditions
   /// for firing automatic implicit [flush()] operations.
@@ -161,9 +164,12 @@ class PersistentQueue {
     return completer.future;
   }
 
-  /// Manually push a flush instruction to happen after current buffer clears.
+  /// Schedule a flush instruction to happen after current task buffer clears.
   ///
-  /// Optional handler callback [OnFlush] [onFlush] is called when it completes.
+  /// An optional handler callback [OnFlush] [onFlush] may be provided so that
+  /// the flush operation only clears out if it returns `true`. It holds
+  /// priority over the [PersistentQueue.onFlush] handler defined at
+  /// [PersistentQueue] construction time.
   Future<void> flush([OnFlush onFlush]) {
     _checkErrorState();
 
@@ -265,13 +271,13 @@ class PersistentQueue {
 
   Future<void> _onFlush(QueueEvent event) async {
     try {
-      final OnFlush _onFlush = event.onFlush ?? onFlush;
+      final OnFlush _flushFunc = event.onFlush ?? onFlush ?? (_) async => true;
 
-      if (_onFlush != null) {
-        await _onFlush(await _toList());
+      final bool flushSuccess = (await _flushFunc(await _toList())) ?? false;
+
+      if (flushSuccess) {
+        await _reset();
       }
-
-      await _reset();
 
       event.completer.complete();
     } catch (e, s) {

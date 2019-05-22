@@ -1,3 +1,7 @@
+## [3.0.0] - 2019-05-22
+- breaking change: `OnFlush` handlers must now return a `boolean` "ack" instead
+of `void`
+
 ## [2.0.1+2] - 2019-05-21
 - minor style fix
 

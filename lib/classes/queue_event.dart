@@ -1,4 +1,8 @@
 // ignore_for_file: public_member_api_docs
+
+/// @nodoc
+library queue_event;
+
 import 'dart:async' show Completer;
 import '../typedefs/typedefs.dart' show OnFlush;
 
