@@ -1,6 +1,0 @@
-dartdoc:
-  ignore:
-    - ambiguous-doc-reference
-    - unresolved-doc-reference
-  warnings:
-    - tool-error
