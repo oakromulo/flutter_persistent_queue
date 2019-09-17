@@ -18,6 +18,8 @@ Future<List<String>> example() async {
 
     autoFlushCnt += list.length;
     print('# of FLUSHED elements: ${list.length}');
+
+    return true;
   });
 
   // register # of persisted items from previous run

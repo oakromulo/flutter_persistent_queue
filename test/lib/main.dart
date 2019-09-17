@@ -104,6 +104,7 @@ Future<String> _unawaitedTest() async {
   pq.flush((list) => flushAction(list).then((_) {
         hasReset = true;
         debugPrint('queue flushed: $testLen items');
+        return true;
       }));
   debugPrint('final flush scheduled with control flag');
 

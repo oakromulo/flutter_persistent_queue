@@ -14,7 +14,7 @@ Add dependency to `pubspec.yaml`:
 ```yaml
 dependencies:
   ...
-  flutter_persistent_queue: ^3.0.0
+  flutter_persistent_queue: ^3.0.0+1
 ```
 
 Run in your terminal:
@@ -59,6 +59,7 @@ flutter drive --target=test_driver/app.dart
 ```
 
 ## Building documentation files
+
 ```sh
 rm -rf doc
 dartdoc --exclude 'dart:async,dart:collection,dart:convert,dart:core,dart:developer,dart:io,dart:isolate,dart:math,dart:typed_data,dart:ui'
@@ -73,8 +74,7 @@ on the permanent storage of a flutter-compatible device.
 This particular design choice limits potential use cases requiring very long
 queues but otherwise provides good performance within a limited resource
 footprint, as it doesn't require serializing and deserializing
-contiguous or chunked [`dart:collections`](
-https://pub.dartlang.org/documentation/collection/latest/) to the filesystem.
+contiguous or chunked [`dart:collections`](https://pub.dartlang.org/documentation/collection/latest/) to the filesystem.
 
 Every `push()` call triggers an asynchronous and isolated write to the
 permanent storage. If the caller awaits until its completion, it is notified

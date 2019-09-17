@@ -1,24 +1,34 @@
+## [3.0.0+1] - 2019-09-17
+
+- minor maintenance
+
 ## [3.0.0] - 2019-05-22
+
 - breaking change: `OnFlush` handlers must now return a `boolean` "ack" instead
-of `void`
+  of `void`
 
 ## [2.0.1+2] - 2019-05-21
+
 - minor style fix
 
 ## [2.0.1+1] - 2019-05-21
+
 - rebuilt docs
 
 ## [2.0.1] - 2019-05-21
+
 - alias feature added
 - cleaner example and tests
 - updated `localstorage` to v2.0.0
 - breaking change: `length()` method now returns `Future<int>` to avoid
-ambiguity and edgy race conditions
+  ambiguity and edgy race conditions
 
 ## [1.0.2] - 2019-05-09
+
 - updated documentation
 
 ## [1.0.1] - 2019-05-09
+
 - minor source code whitespace fix
 
 ## [1.0.0] - 2019-05-09
@@ -28,12 +38,10 @@ ambiguity and edgy race conditions
 
 ## [0.1.4] - 2019-02-27
 
-- bump [synchronized](https://pub.dartlang.org/packages/synchronized) to 
-[v2.1.0](
-https://pub.dartlang.org/packages/synchronized/versions/2.1.0) to properly
-synchronize inner blocks on reentrant locks.
-- improved [example](
-https://pub.dartlang.org/packages/flutter_persistent_queue#-example-tab-)
+- bump [synchronized](https://pub.dartlang.org/packages/synchronized) to
+  [v2.1.0](https://pub.dartlang.org/packages/synchronized/versions/2.1.0) to properly
+  synchronize inner blocks on reentrant locks.
+- improved [example](https://pub.dartlang.org/packages/flutter_persistent_queue#-example-tab-)
 
 ## [0.1.3] - 2019-02-27
 
