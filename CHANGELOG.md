@@ -1,3 +1,7 @@
+## [4.0.0] - 2019-10-11
+
+- breaking change: `<dynamic>` json encodable data beyond `Map<String, dynamic>` now accepted
+
 ## [3.0.0+1] - 2019-09-17
 
 - minor maintenance
