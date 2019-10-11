@@ -9,12 +9,12 @@ Future<List<String>> example() async {
 
   int autoFlushCnt = 0, pushCnt = 0;
 
-  List<String> strListFromMapList(List<Map<String, dynamic>> list) =>
-      list.map<String>((v) => '${v['μs']}').toList();
+  List<String> toStrList(List<dynamic> list) =>
+      list.map<String>((dynamic v) => '${v['μs']}').toList();
 
   // instantiate queue and define implicit flush to fill [persistedValues]
   final pq = PersistentQueue('pq', flushAt: flushAt, onFlush: (list) async {
-    persistedValues.addAll(strListFromMapList(list));
+    persistedValues.addAll(toStrList(list));
 
     autoFlushCnt += list.length;
     print('# of FLUSHED elements: ${list.length}');
@@ -26,7 +26,7 @@ Future<List<String>> example() async {
   final initCnt = await pq.length;
 
   // preview old elements before adding new ones, without dequeueing
-  persistedValues.addAll(strListFromMapList(await pq.toList(growable: false)));
+  persistedValues.addAll(toStrList(await pq.toList(growable: false)));
 
   // enqueue a random-ish amount of values, without awaiting
   for (int i = 0; i < 36; ++i) {
@@ -36,7 +36,7 @@ Future<List<String>> example() async {
       continue;
     }
 
-    pq.push(<String, dynamic>{'μs': '$microseconds'});
+    pq.push({'μs': '$microseconds'});
     ++pushCnt;
   }
 

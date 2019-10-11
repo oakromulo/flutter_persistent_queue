@@ -74,9 +74,9 @@ Future<String> _unawaitedTest() async {
   const testLen = 10000;
   final source = <int>[], target = <int>[];
 
-  Future<bool> flushAction(List<Map<String, dynamic>> list) async {
+  Future<bool> flushAction(List<dynamic> list) async {
     try {
-      target.addAll(list.map((v) => v['v'] as int));
+      target.addAll(list.map((dynamic v) => v['v'] as int));
 
       return true;
     } catch (_) {
@@ -124,9 +124,9 @@ Future<String> _sequentialTest() async {
   const testLen = 10000;
   final source = <int>[], target = <int>[];
 
-  Future<bool> flushAction(List<Map<String, dynamic>> list) async {
+  Future<bool> flushAction(List<dynamic> list) async {
     try {
-      target.addAll(list.map((v) => v['v'] as int));
+      target.addAll(list.map((dynamic v) => v['v'] as int));
       debugPrint('flush: ${target.length} / $testLen');
 
       return true;

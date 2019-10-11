@@ -153,7 +153,9 @@ class PersistentQueue {
   }
 
   /// Push an [item] to the end of the [PersistentQueue] after buffer clears.
-  Future<void> push(Map<String, dynamic> item) {
+  ///
+  /// p.s. [item] must be json encodable, as `json.encode()` is called over it
+  Future<void> push(dynamic item) {
     _checkOverflow();
     _checkErrorState();
 
@@ -182,11 +184,11 @@ class PersistentQueue {
   }
 
   /// Preview a [List] of currently buffered items, without any dequeuing.
-  Future<List<Map<String, dynamic>>> toList({bool growable = true}) {
+  Future<List<dynamic>> toList({bool growable = true}) {
     _checkErrorState();
 
     const type = QueueEventType.LIST;
-    final completer = Completer<List<Map<String, dynamic>>>();
+    final completer = Completer<List<dynamic>>();
 
     _buffer.push(QueueEvent(type, growable: growable, completer: completer));
 
@@ -257,10 +259,10 @@ class PersistentQueue {
 
   Future<void> _onList(QueueEvent event) async {
     try {
-      List<Map<String, dynamic>> list = await _toList();
+      List<dynamic> list = await _toList();
 
       if (event.growable) {
-        list = List<Map<String, dynamic>>.from(list, growable: true);
+        list = List<dynamic>.from(list, growable: true);
       }
 
       event.completer.complete(list);
@@ -306,16 +308,16 @@ class PersistentQueue {
 
   void _onLength(QueueEvent event) => event.completer.complete(_len);
 
-  Future<List<Map<String, dynamic>>> _toList() async {
+  Future<List<dynamic>> _toList() async {
     if (_len == null || _len < 1) {
-      return [];
+      return <dynamic>[];
     }
 
-    final li = List<Map<String, dynamic>>(_len);
+    final li = List<dynamic>(_len);
 
     await _file((LocalStorage storage) async {
       for (int k = 0; k < _len; ++k) {
-        li[k] = await storage.getItem('$k') as Map<String, dynamic>;
+        li[k] = await storage.getItem('$k');
       }
     });
 
@@ -330,7 +332,7 @@ class PersistentQueue {
     });
   }
 
-  Future<void> _write(Map<String, dynamic> value) async {
+  Future<void> _write(dynamic value) async {
     await _file((LocalStorage storage) async {
       await storage.setItem('$_len', value);
 

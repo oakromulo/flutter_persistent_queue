@@ -12,7 +12,7 @@ class QueueEvent {
       {this.completer, this.item, this.onFlush, this.growable, this.noPersist});
   final QueueEventType type;
   final Completer<dynamic> completer;
-  final Map<String, dynamic> item;
+  final dynamic item;
   final OnFlush onFlush;
   final bool growable, noPersist;
 }
