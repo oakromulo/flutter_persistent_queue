@@ -26,7 +26,7 @@ Future<List<String>> example() async {
   final initCnt = await pq.length;
 
   // preview old elements before adding new ones, without dequeueing
-  persistedValues.addAll(toStrList(await pq.toList(growable: false)));
+  persistedValues.addAll(toStrList(await pq.toList()));
 
   // enqueue a random-ish amount of values, without awaiting
   for (int i = 0; i < 36; ++i) {

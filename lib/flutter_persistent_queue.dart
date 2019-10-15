@@ -1,4 +1,4 @@
-/// A simple file-based non-volatile persistent queue library for flutter.
+/// A file-based queue that persists on local storage for flutter mobile apps.
 ///
 /// Typical use-case scenario is for small to medium sized in-device buffers
 /// storing persistent yet temporary mission-critical data, until it can be
@@ -18,16 +18,12 @@ import './classes/queue_buffer.dart' show QueueBuffer;
 import './classes/queue_event.dart' show QueueEvent, QueueEventType;
 import './typedefs/typedefs.dart' show OnFlush;
 
-/// A basic implementation of persistent queues for flutter-compatible devices.
+/// A [PersistentQueue] stores data via [push] and clears it via [flush] calls.
 class PersistentQueue {
-  /// Constructs a new [PersistentQueue] or loads a previously cached one.
+  /// Constructs a new [PersistentQueue] or returns a previously cached one.
   ///
-  /// A [filename], not a `filepath`, is the only required parameter. It's used
-  /// internally as a key for the persistent queue.
-  ///
-  /// The optional [filepath] is used to enforce a directory to store the queue
-  /// named/keyed defined by [filename]. It defaults to the platform-specific
-  /// application document directory.
+  /// [filename] gets instantiated under `ApplicationDocumentsDirectory` to
+  /// store/load the persistent queue.
   ///
   /// An optional [OnFlush] [onFlush] handler can be supplied at construction
   /// time, to be called implicitly before each [flush()] operation emptying
@@ -46,52 +42,25 @@ class PersistentQueue {
   /// Setting [maxLength] causes the queue to throw exceptions at [push] time
   /// when the queue internally holds more elements than this hard maximum. By
   /// default it's calculated as 5 times the size of [flushAt].
-  ///
-  /// It's possible to force the instance being created to always replace any
-  /// previously existing queues with the same [filename] on the global cache
-  /// by setting the [noCache] parameter to `true`. In case a cache replacement
-  /// happens then the old queue gets fully destroyed and dealloacted in favor
-  /// of the new one.
-  ///
-  /// The final [noPersist] optional named parameter allows the queue to be
-  /// memory-only. It will start empty without reloading from localstorage and
-  /// will not persist to permanent storage. Mostly used for testing purposes.
   factory PersistentQueue(String filename,
-      {String filepath,
-      String alias,
-      OnFlush onFlush,
+      {OnFlush onFlush,
       int flushAt = 100,
-      int maxLength,
-      bool noCache = false,
-      bool noPersist = false,
-      Duration flushTimeout = const Duration(minutes: 5)}) {
-    if (_cache.containsKey(filename)) {
-      if (!noCache) {
-        return _cache[filename];
-      }
-
-      _cache[filename].destroy();
-    }
-
-    return _cache[filename] = PersistentQueue._internal(filename,
-        filepath: filepath,
-        alias: alias,
-        onFlush: onFlush,
+      Duration flushTimeout = const Duration(minutes: 5),
+      int maxLength}) {
+    _configs[filename] = _QConfig(
         flushAt: flushAt,
         flushTimeout: flushTimeout,
-        maxLength: maxLength,
-        noPersist: noPersist);
+        maxLength: maxLength ?? flushAt * 5);
+
+    if (_cache.containsKey(filename)) {
+      return _cache[filename];
+    }
+
+    return _cache[filename] =
+        PersistentQueue._internal(filename, onFlush: onFlush);
   }
 
-  PersistentQueue._internal(this.filename,
-      {this.filepath,
-      this.alias,
-      this.onFlush,
-      this.flushAt,
-      this.flushTimeout,
-      int maxLength,
-      bool noPersist})
-      : _maxLength = maxLength ?? flushAt * 5 {
+  PersistentQueue._internal(this.filename, {this.onFlush}) {
     _buffer = QueueBuffer<QueueEvent>(_onData);
 
     const type = QueueEventType.RELOAD;
@@ -99,43 +68,23 @@ class PersistentQueue {
 
     _ready = completer.future;
 
-    _buffer.push(QueueEvent(type, noPersist: noPersist, completer: completer));
+    _buffer.push(QueueEvent(type, completer: completer));
   }
 
   /// Permanent storage extensionless destination filename.
-  ///
-  /// p.s. also used as caching key to avoid conflicting  re-instantiations.
   final String filename;
-
-  /// Queue nickname, fully optional.
-  final String alias;
-
-  /// Optional [String] to enforce a certain device path to store the queue.
-  ///
-  /// p.s. defaults to the platform-specific application document directory.
-  final String filepath;
 
   /// Optional callback to be called before each implicit [flush] call.
   final OnFlush onFlush;
 
-  /// Target number of queued elements that triggers an implicit [flush] call.
-  final int flushAt;
-
-  /// Target maximum time in queue before an implicit auto [flush] call.
-  final Duration flushTimeout;
-
-  // global <filename, queue> dictionary of all PersistentQueue instances
   static final _cache = <String, PersistentQueue>{};
-
-  final int _maxLength;
+  static final _configs = <String, _QConfig>{};
 
   DateTime _deadline;
   Exception _errorState;
+  int _len = 0;
   Future<bool> _ready;
   QueueBuffer<QueueEvent> _buffer;
-
-  // internal count of enqueued elements
-  int _len = 0;
 
   /// Flag indicating queue readiness after initial reload event.
   Future<bool> get ready => _ready;
@@ -151,6 +100,15 @@ class PersistentQueue {
 
     return completer.future;
   }
+
+  /// Target number of queued elements that triggers an implicit [flush] call.
+  int get flushAt => _configs[filename].flushAt;
+
+  /// Target maximum time in queue before an implicit auto [flush] call.
+  Duration get flushTimeout => _configs[filename].flushTimeout;
+
+  /// Queue throws exceptions at [push] time if already at [maxLength] elements.
+  int get maxLength => _configs[filename].maxLength;
 
   /// Push an [item] to the end of the [PersistentQueue] after buffer clears.
   ///
@@ -184,13 +142,13 @@ class PersistentQueue {
   }
 
   /// Preview a [List] of currently buffered items, without any dequeuing.
-  Future<List<dynamic>> toList({bool growable = true}) {
+  Future<List<dynamic>> toList() {
     _checkErrorState();
 
     const type = QueueEventType.LIST;
     final completer = Completer<List<dynamic>>();
 
-    _buffer.push(QueueEvent(type, growable: growable, completer: completer));
+    _buffer.push(QueueEvent(type, completer: completer));
 
     return completer.future;
   }
@@ -200,7 +158,7 @@ class PersistentQueue {
     const type = QueueEventType.DESTROY;
     final completer = Completer<void>();
 
-    _buffer.push(QueueEvent(type, noPersist: noPersist, completer: completer));
+    _buffer.push(QueueEvent(type, completer: completer));
 
     return completer.future;
   }
@@ -240,15 +198,11 @@ class PersistentQueue {
       _errorState = null;
       _len = 0;
 
-      if (event.noPersist) {
-        await _reset();
-      } else {
-        await _file((LocalStorage storage) async {
-          while (await storage.getItem('$_len') != null) {
-            ++_len;
-          }
-        });
-      }
+      await _file((LocalStorage storage) async {
+        while (await storage.getItem('$_len') != null) {
+          ++_len;
+        }
+      });
 
       event.completer.complete(true);
     } catch (e) {
@@ -259,13 +213,7 @@ class PersistentQueue {
 
   Future<void> _onList(QueueEvent event) async {
     try {
-      List<dynamic> list = await _toList();
-
-      if (event.growable) {
-        list = List<dynamic>.from(list, growable: true);
-      }
-
-      event.completer.complete(list);
+      event.completer.complete(await _toList());
     } catch (e, s) {
       event.completer.completeError(e, s);
     }
@@ -289,15 +237,9 @@ class PersistentQueue {
 
   Future<void> _onDestroy(QueueEvent event) async {
     try {
-      if (event.noPersist) {
-        await _reset();
-      }
-
-      // clear event buffer and remove destroyed instance from cache
       await _buffer.destroy();
       _cache.remove(filename);
 
-      // set error state to disallow further operations on leftover instance
       _errorState = Exception('Queue Destroyed');
 
       event.completer.complete();
@@ -343,7 +285,7 @@ class PersistentQueue {
   }
 
   Future<void> _file(_StorageFunc inputFunc) async {
-    final storage = LocalStorage(filename, filepath);
+    final storage = LocalStorage(filename);
 
     await storage.ready;
     await inputFunc(storage);
@@ -358,7 +300,7 @@ class PersistentQueue {
   }
 
   void _checkOverflow() {
-    if (_len + _buffer.length - 1 <= _maxLength) {
+    if (_len + _buffer.length - 1 <= maxLength) {
       return;
     }
 
@@ -369,6 +311,14 @@ class PersistentQueue {
   bool _expiredTimeout() => _deadline != null && _nowUtc().isAfter(_deadline);
 
   DateTime _nowUtc() => DateTime.now().toUtc();
+}
+
+class _QConfig {
+  _QConfig({this.flushAt, this.flushTimeout, this.maxLength});
+
+  final int flushAt;
+  final Duration flushTimeout;
+  final int maxLength;
 }
 
 typedef _StorageFunc = Future<void> Function(LocalStorage);

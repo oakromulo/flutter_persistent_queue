@@ -8,13 +8,11 @@ import '../typedefs/typedefs.dart' show OnFlush;
 
 /// @nodoc
 class QueueEvent {
-  QueueEvent(this.type,
-      {this.completer, this.item, this.onFlush, this.growable, this.noPersist});
+  QueueEvent(this.type, {this.completer, this.item, this.onFlush});
   final QueueEventType type;
   final Completer<dynamic> completer;
   final dynamic item;
   final OnFlush onFlush;
-  final bool growable, noPersist;
 }
 
 /// @nodoc
