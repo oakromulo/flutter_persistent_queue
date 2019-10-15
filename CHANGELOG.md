@@ -1,3 +1,9 @@
+## [5.0.0] - 2019-10-14
+
+- breaking change: constructor now always overrides previous queue settings, even on cache hits
+- deprecated parameters: filePath, growable, noCache, noPersist
+- updated iOS build settings
+
 ## [4.0.0] - 2019-10-11
 
 - breaking change: `<dynamic>` json encodable data beyond `Map<String, dynamic>` now accepted

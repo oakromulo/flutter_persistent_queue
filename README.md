@@ -14,7 +14,7 @@ Add dependency to `pubspec.yaml`:
 ```yaml
 dependencies:
   ...
-  flutter_persistent_queue: ^4.0.0
+  flutter_persistent_queue: ^5.0.0
 ```
 
 Run in your terminal:
