@@ -1,3 +1,7 @@
+## [5.0.1] - 2019-10-16
+
+- fixed a caching bug related to the OnFlush callback
+
 ## [5.0.0] - 2019-10-14
 
 - breaking change: constructor now always overrides previous queue settings, even on cache hits
