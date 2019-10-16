@@ -46,8 +46,7 @@ class PersistentQueue {
       {int flushAt = 100,
       Duration flushTimeout = const Duration(minutes: 5),
       int maxLength,
-      OnFlush onFlush
-      }) {
+      OnFlush onFlush}) {
     _configs[filename] = _QConfig(
         flushAt: flushAt,
         flushTimeout: flushTimeout,
