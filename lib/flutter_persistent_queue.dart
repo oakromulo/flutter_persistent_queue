@@ -43,25 +43,26 @@ class PersistentQueue {
   /// when the queue internally holds more elements than this hard maximum. By
   /// default it's calculated as 5 times the size of [flushAt].
   factory PersistentQueue(String filename,
-      {OnFlush onFlush,
-      int flushAt = 100,
+      {int flushAt = 100,
       Duration flushTimeout = const Duration(minutes: 5),
-      int maxLength}) {
+      int maxLength,
+      OnFlush onFlush
+      }) {
     _configs[filename] = _QConfig(
         flushAt: flushAt,
         flushTimeout: flushTimeout,
-        maxLength: maxLength ?? flushAt * 5);
+        maxLength: maxLength ?? flushAt * 5,
+        onFlush: onFlush);
 
     if (_cache.containsKey(filename)) {
       return _cache[filename];
     }
 
-    return _cache[filename] =
-        PersistentQueue._internal(filename, onFlush: onFlush);
+    return _cache[filename] = PersistentQueue._internal(filename);
   }
 
-  PersistentQueue._internal(this.filename, {this.onFlush}) {
-    _buffer = QueueBuffer<QueueEvent>(_onData);
+  PersistentQueue._internal(this.filename) {
+    _buffer = QueueBuffer<QueueEvent>(_onEvent);
 
     const type = QueueEventType.RELOAD;
     final completer = Completer<bool>();
@@ -73,9 +74,6 @@ class PersistentQueue {
 
   /// Permanent storage extensionless destination filename.
   final String filename;
-
-  /// Optional callback to be called before each implicit [flush] call.
-  final OnFlush onFlush;
 
   static final _cache = <String, PersistentQueue>{};
   static final _configs = <String, _QConfig>{};
@@ -101,14 +99,17 @@ class PersistentQueue {
     return completer.future;
   }
 
-  /// Target number of queued elements that triggers an implicit [flush] call.
+  /// Target number of queued elements that triggers an implicit [flush].
   int get flushAt => _configs[filename].flushAt;
 
-  /// Target maximum time in queue before an implicit auto [flush] call.
+  /// Target maximum time in queue before an implicit auto [flush].
   Duration get flushTimeout => _configs[filename].flushTimeout;
 
   /// Queue throws exceptions at [push] time if already at [maxLength] elements.
   int get maxLength => _configs[filename].maxLength;
+
+  /// Optional callback to be implicitly called on each internal [flush].
+  OnFlush get onFlush => _configs[filename].onFlush;
 
   /// Push an [item] to the end of the [PersistentQueue] after buffer clears.
   ///
@@ -128,8 +129,7 @@ class PersistentQueue {
   ///
   /// An optional handler callback [OnFlush] [onFlush] may be provided so that
   /// the flush operation only clears out if it returns `true`. It holds
-  /// priority over the [PersistentQueue.onFlush] handler defined at
-  /// [PersistentQueue] construction time.
+  /// priority over the [onFlush] handler defined at construction time.
   Future<void> flush([OnFlush onFlush]) {
     _checkErrorState();
 
@@ -163,28 +163,28 @@ class PersistentQueue {
     return completer.future;
   }
 
-  Future<void> _onData(QueueEvent event) async {
+  Future<void> _onEvent(QueueEvent event) async {
     if (event.type == QueueEventType.FLUSH) {
-      await _onFlush(event);
+      await _onFlushEvent(event);
     } else if (event.type == QueueEventType.DESTROY) {
-      await _onDestroy(event);
+      await _onDestroyEvent(event);
     } else if (event.type == QueueEventType.LENGTH) {
-      _onLength(event);
+      _onLengthEvent(event);
     } else if (event.type == QueueEventType.LIST) {
-      await _onList(event);
+      await _onListEvent(event);
     } else if (event.type == QueueEventType.PUSH) {
-      await _onPush(event);
+      await _onPushEvent(event);
     } else if (event.type == QueueEventType.RELOAD) {
-      await _onReload(event);
+      await _onReloadEvent(event);
     }
   }
 
-  Future<void> _onPush(QueueEvent event) async {
+  Future<void> _onPushEvent(QueueEvent event) async {
     try {
       await _write(event.item);
 
       if (_len >= flushAt || _expiredTimeout()) {
-        await _onFlush(event);
+        await _onFlushEvent(event);
       } else {
         event.completer.complete();
       }
@@ -193,7 +193,7 @@ class PersistentQueue {
     }
   }
 
-  Future<void> _onReload(QueueEvent event) async {
+  Future<void> _onReloadEvent(QueueEvent event) async {
     try {
       _errorState = null;
       _len = 0;
@@ -211,7 +211,7 @@ class PersistentQueue {
     }
   }
 
-  Future<void> _onList(QueueEvent event) async {
+  Future<void> _onListEvent(QueueEvent event) async {
     try {
       event.completer.complete(await _toList());
     } catch (e, s) {
@@ -219,7 +219,7 @@ class PersistentQueue {
     }
   }
 
-  Future<void> _onFlush(QueueEvent event) async {
+  Future<void> _onFlushEvent(QueueEvent event) async {
     try {
       final OnFlush _flushFunc = event.onFlush ?? onFlush ?? (_) async => true;
 
@@ -235,7 +235,7 @@ class PersistentQueue {
     }
   }
 
-  Future<void> _onDestroy(QueueEvent event) async {
+  Future<void> _onDestroyEvent(QueueEvent event) async {
     try {
       await _buffer.destroy();
       _cache.remove(filename);
@@ -248,7 +248,7 @@ class PersistentQueue {
     }
   }
 
-  void _onLength(QueueEvent event) => event.completer.complete(_len);
+  void _onLengthEvent(QueueEvent event) => event.completer.complete(_len);
 
   Future<List<dynamic>> _toList() async {
     if (_len == null || _len < 1) {
@@ -314,11 +314,12 @@ class PersistentQueue {
 }
 
 class _QConfig {
-  _QConfig({this.flushAt, this.flushTimeout, this.maxLength});
+  _QConfig({this.flushAt, this.flushTimeout, this.maxLength, this.onFlush});
 
   final int flushAt;
   final Duration flushTimeout;
   final int maxLength;
+  final OnFlush onFlush;
 }
 
 typedef _StorageFunc = Future<void> Function(LocalStorage);
