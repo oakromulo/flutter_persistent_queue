@@ -71,7 +71,7 @@ class _MyAppState extends State<MyApp> {
 }
 
 Future<String> _unawaitedTest() async {
-  const testLen = 10000;
+  const testLen = 5000;
   final source = <int>[], target = <int>[];
 
   Future<bool> flushAction(List<dynamic> list) async {
@@ -121,7 +121,7 @@ Future<String> _unawaitedTest() async {
 }
 
 Future<String> _sequentialTest() async {
-  const testLen = 10000;
+  const testLen = 5000;
   final source = <int>[], target = <int>[];
 
   Future<bool> flushAction(List<dynamic> list) async {

@@ -1,3 +1,8 @@
+## [5.1.0] - 2019-10-24
+
+- [localstorage](https://pub.dev/packages/localstorage) dependency bumped to v3
+- integration tests reviewed
+
 ## [5.0.1] - 2019-10-16
 
 - fixed a caching bug related to the OnFlush callback

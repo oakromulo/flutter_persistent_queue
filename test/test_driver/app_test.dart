@@ -36,30 +36,32 @@ void main() {
     });
 
     test('run unawaited test', () async {
-      const testLen = 10000;
+      const testLen = 5000;
 
       await driver.tap(unawaitedFinder);
 
       final t0 = DateTime.now();
       DateTime t1;
 
-      int i = 1200;
+      int i = 600;
       bool success = false;
 
       while (--i > 0) {
         final txt = await driver.getText(txt1Finder);
+
         if (txt.contains('success')) {
           t1 = DateTime.now();
           success = true;
           break;
         }
+
         await Future<void>.delayed(Duration(milliseconds: 100));
       }
       expect(success, true);
 
       final tput = testLen / t1.difference(t0).inSeconds;
       print('throughput: ${tput.toStringAsFixed(2)}');
-      expect(tput, greaterThan(500.0));
+      expect(tput, greaterThan(250.0));
     });
   });
 }
