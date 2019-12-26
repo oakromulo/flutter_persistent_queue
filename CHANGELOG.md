@@ -1,3 +1,7 @@
+## [5.1.1] - 2019-12-26
+
+- updated dependencies
+
 ## [5.1.0] - 2019-10-24
 
 - [localstorage](https://pub.dev/packages/localstorage) dependency bumped to v3
