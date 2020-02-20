@@ -43,17 +43,17 @@ class PersistentQueue {
       Duration flushTimeout = const Duration(minutes: 5),
       int maxLength,
       OnFlush onFlush}) {
+    if (_queues.containsKey(filename)) {
+      return _queues[filename];
+    }
+
     _configs[filename] = _QueueConfig(
         flushAt: flushAt,
         flushTimeout: flushTimeout,
         maxLength: maxLength ?? flushAt * 5,
         onFlush: onFlush);
 
-    if (_cache.containsKey(filename)) {
-      return _cache[filename];
-    }
-
-    return _cache[filename] = PersistentQueue._internal(filename);
+    return _queues[filename] = PersistentQueue._internal(filename);
   }
 
   PersistentQueue._internal(this.filename) : _buffer = QueueBuffer() {
@@ -63,7 +63,7 @@ class PersistentQueue {
   /// Permanent storage extensionless destination filename.
   final String filename;
 
-  static final _cache = <String, PersistentQueue>{};
+  static final _queues = <String, PersistentQueue>{};
   static final _configs = <String, _QueueConfig>{};
 
   final QueueBuffer _buffer;
@@ -136,7 +136,9 @@ class PersistentQueue {
   Future<void> _destroy() async {
     await _buffer.destroy();
 
-    _cache.remove(filename);
+    _configs.remove(filename);
+    _queues.remove(filename);
+
     _errorState = Exception('Queue Destroyed');
   }
 
