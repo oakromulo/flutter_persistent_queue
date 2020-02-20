@@ -10,13 +10,9 @@
 /// executed sequentially on an isolated event loop per queue.
 library flutter_persistent_queue;
 
-import 'dart:async' show Completer;
-
+import 'dart:async' show FutureOr;
 import 'package:localstorage/localstorage.dart' show LocalStorage;
-
-import './classes/queue_buffer.dart' show QueueBuffer;
-import './classes/queue_event.dart' show QueueEvent, QueueEventType;
-import './typedefs/typedefs.dart' show OnFlush;
+import './queue_buffer.dart' show QueueBuffer;
 
 /// A [PersistentQueue] stores data via [push] and clears it via [flush] calls.
 class PersistentQueue {
@@ -60,15 +56,8 @@ class PersistentQueue {
     return _cache[filename] = PersistentQueue._internal(filename);
   }
 
-  PersistentQueue._internal(this.filename) {
-    _buffer = QueueBuffer<QueueEvent>(_onEvent);
-
-    const type = QueueEventType.RELOAD;
-    final completer = Completer<bool>();
-
-    _ready = completer.future;
-
-    _buffer.push(QueueEvent(type, completer: completer));
+  PersistentQueue._internal(this.filename) : _buffer = QueueBuffer() {
+    _ready = _buffer.defer<void>(_reload);
   }
 
   /// Permanent storage extensionless destination filename.
@@ -77,25 +66,21 @@ class PersistentQueue {
   static final _cache = <String, PersistentQueue>{};
   static final _configs = <String, _QConfig>{};
 
+  final QueueBuffer _buffer;
+
   DateTime _deadline;
   Exception _errorState;
   int _len = 0;
-  Future<bool> _ready;
-  QueueBuffer<QueueEvent> _buffer;
+  Future<void> _ready;
 
   /// Flag indicating queue readiness after initial reload event.
-  Future<bool> get ready => _ready;
+  Future<void> get ready => _ready;
 
   /// Flag indicating actual queue length after buffered operations go through.
   Future<int> get length {
     _checkErrorState();
 
-    const type = QueueEventType.LENGTH;
-    final completer = Completer<int>();
-
-    _buffer.push(QueueEvent(type, completer: completer));
-
-    return completer.future;
+    return _buffer.defer<int>(() => _len);
   }
 
   /// Target number of queued elements that triggers an implicit [flush].
@@ -117,11 +102,7 @@ class PersistentQueue {
     _checkOverflow();
     _checkErrorState();
 
-    const type = QueueEventType.PUSH;
-    final completer = Completer<void>();
-    _buffer.push(QueueEvent(type, item: item, completer: completer));
-
-    return completer.future;
+    return _buffer.defer(() => _push(item));
   }
 
   /// Schedule a flush instruction to happen after current task buffer clears.
@@ -132,67 +113,28 @@ class PersistentQueue {
   Future<void> flush([OnFlush onFlush]) {
     _checkErrorState();
 
-    const type = QueueEventType.FLUSH;
-    final completer = Completer<void>();
-
-    _buffer.push(QueueEvent(type, onFlush: onFlush, completer: completer));
-
-    return completer.future;
+    return _buffer.defer(() => _flush(onFlush));
   }
 
   /// Preview a [List] of currently buffered items, without any dequeuing.
   Future<List<dynamic>> toList() {
     _checkErrorState();
 
-    const type = QueueEventType.LIST;
-    final completer = Completer<List<dynamic>>();
-
-    _buffer.push(QueueEvent(type, completer: completer));
-
-    return completer.future;
+    return _buffer.defer<List<dynamic>>(_toList);
   }
 
   /// Optionally deallocate all queue resources when called
-  Future<void> destroy({bool noPersist = false}) {
-    const type = QueueEventType.DESTROY;
-    final completer = Completer<void>();
+  Future<void> destroy() => _buffer.defer(_destroy);
 
-    _buffer.push(QueueEvent(type, completer: completer));
+  Future<void> _push(dynamic item) async {
+    await _write(item);
 
-    return completer.future;
-  }
-
-  Future<void> _onEvent(QueueEvent event) async {
-    if (event.type == QueueEventType.FLUSH) {
-      await _onFlushEvent(event);
-    } else if (event.type == QueueEventType.DESTROY) {
-      await _onDestroyEvent(event);
-    } else if (event.type == QueueEventType.LENGTH) {
-      _onLengthEvent(event);
-    } else if (event.type == QueueEventType.LIST) {
-      await _onListEvent(event);
-    } else if (event.type == QueueEventType.PUSH) {
-      await _onPushEvent(event);
-    } else if (event.type == QueueEventType.RELOAD) {
-      await _onReloadEvent(event);
+    if (_len >= flushAt || _expiredTimeout()) {
+      await _flush();
     }
   }
 
-  Future<void> _onPushEvent(QueueEvent event) async {
-    try {
-      await _write(event.item);
-
-      if (_len >= flushAt || _expiredTimeout()) {
-        await _onFlushEvent(event);
-      } else {
-        event.completer.complete();
-      }
-    } catch (e, s) {
-      event.completer.completeError(e, s);
-    }
-  }
-
-  Future<void> _onReloadEvent(QueueEvent event) async {
+  Future<void> _reload() async {
     try {
       _errorState = null;
       _len = 0;
@@ -202,52 +144,28 @@ class PersistentQueue {
           ++_len;
         }
       });
-
-      event.completer.complete(true);
     } catch (e) {
+      print(e);
       _errorState = Exception(e.toString());
-      event.completer.complete(false);
     }
   }
 
-  Future<void> _onListEvent(QueueEvent event) async {
-    try {
-      event.completer.complete(await _toList());
-    } catch (e, s) {
-      event.completer.completeError(e, s);
+  Future<void> _flush([OnFlush onFlushParam]) async {
+    final OnFlush _flushFunc = onFlushParam ?? onFlush ?? (_) => true;
+
+    final bool flushSuccess = (await _flushFunc(await _toList())) ?? false;
+
+    if (flushSuccess) {
+      await _reset();
     }
   }
 
-  Future<void> _onFlushEvent(QueueEvent event) async {
-    try {
-      final OnFlush _flushFunc = event.onFlush ?? onFlush ?? (_) async => true;
+  Future<void> _destroy() async {
+    await _buffer.destroy();
 
-      final bool flushSuccess = (await _flushFunc(await _toList())) ?? false;
-
-      if (flushSuccess) {
-        await _reset();
-      }
-
-      event.completer.complete();
-    } catch (e, s) {
-      event.completer.completeError(e, s);
-    }
+    _cache.remove(filename);
+    _errorState = Exception('Queue Destroyed');
   }
-
-  Future<void> _onDestroyEvent(QueueEvent event) async {
-    try {
-      await _buffer.destroy();
-      _cache.remove(filename);
-
-      _errorState = Exception('Queue Destroyed');
-
-      event.completer.complete();
-    } catch (e, s) {
-      event.completer.completeError(e, s);
-    }
-  }
-
-  void _onLengthEvent(QueueEvent event) => event.completer.complete(_len);
 
   Future<List<dynamic>> _toList() async {
     if (_len == null || _len < 1) {
@@ -320,5 +238,8 @@ class _QConfig {
   final int maxLength;
   final OnFlush onFlush;
 }
+
+/// A spec for optional queue iteration prior to a [PersistentQueue.flush()].
+typedef OnFlush = FutureOr<bool> Function(List<dynamic>);
 
 typedef _StorageFunc = Future<void> Function(LocalStorage);
