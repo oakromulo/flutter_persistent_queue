@@ -44,15 +44,15 @@ class PersistentQueue {
       int maxLength,
       String nickname,
       OnFlush onFlush}) {
-    if (_queues.containsKey(filename)) {
-      return _queues[filename];
-    }
-
     final config = _QueueConfig(
         flushAt: flushAt,
         flushTimeout: flushTimeout,
         maxLength: maxLength ?? flushAt * 5,
         onFlush: onFlush);
+
+    if (_queues.containsKey(filename)) {
+      return _queues[filename];
+    }
 
     return _queues[filename] =
         PersistentQueue._internal(filename, config, nickname ?? filename);
