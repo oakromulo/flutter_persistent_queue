@@ -47,16 +47,17 @@ class PersistentQueue {
       return _queues[filename];
     }
 
-    _configs[filename] = _QueueConfig(
+    final config = _QueueConfig(
         flushAt: flushAt,
         flushTimeout: flushTimeout,
         maxLength: maxLength ?? flushAt * 5,
         onFlush: onFlush);
 
-    return _queues[filename] = PersistentQueue._internal(filename);
+    return _queues[filename] = PersistentQueue._internal(filename, config);
   }
 
-  PersistentQueue._internal(this.filename) : _buffer = QueueBuffer() {
+  PersistentQueue._internal(this.filename, this._config)
+      : _buffer = QueueBuffer() {
     _ready = _buffer.defer<void>(_reload);
   }
 
@@ -64,9 +65,9 @@ class PersistentQueue {
   final String filename;
 
   static final _queues = <String, PersistentQueue>{};
-  static final _configs = <String, _QueueConfig>{};
 
   final QueueBuffer _buffer;
+  final _QueueConfig _config;
 
   DateTime _deadline;
   Exception _errorState;
@@ -126,7 +127,7 @@ class PersistentQueue {
   }
 
   void _checkOverflow() {
-    if (_len + _buffer.length - 1 <= _configs[filename].maxLength) {
+    if (_len + _buffer.length - 1 <= _config.maxLength) {
       return;
     }
 
@@ -136,7 +137,6 @@ class PersistentQueue {
   Future<void> _destroy() async {
     await _buffer.destroy();
 
-    _configs.remove(filename);
     _queues.remove(filename);
 
     _errorState = Exception('Queue Destroyed');
@@ -150,10 +150,9 @@ class PersistentQueue {
   }
 
   Future<void> _flush([OnFlush onFlushParam]) async {
-    final OnFlush _flushFunc =
-        onFlushParam ?? _configs[filename].onFlush ?? (_) => true;
+    final OnFlush onFlush = onFlushParam ?? _config.onFlush ?? (_) => true;
 
-    final bool flushSuccess = (await _flushFunc(await _toList())) ?? false;
+    final bool flushSuccess = (await onFlush(await _toList())) ?? false;
 
     if (flushSuccess) {
       await _reset();
@@ -163,7 +162,7 @@ class PersistentQueue {
   Future<void> _push(dynamic item) async {
     await _write(item);
 
-    if (_len >= _configs[filename].flushAt || _isExpired) {
+    if (_len >= _config.flushAt || _isExpired) {
       await _flush();
     }
   }
@@ -179,7 +178,6 @@ class PersistentQueue {
         }
       });
     } catch (e) {
-      print(e);
       _errorState = Exception(e.toString());
     }
   }
@@ -192,8 +190,7 @@ class PersistentQueue {
     });
   }
 
-  void _resetDeadline() =>
-      _deadline = _nowUtc.add(_configs[filename].flushTimeout);
+  void _resetDeadline() => _deadline = _nowUtc.add(_config.flushTimeout);
 
   Future<List<dynamic>> _toList() async {
     if (_len == null || _len < 1) {
