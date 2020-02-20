@@ -43,7 +43,7 @@ class PersistentQueue {
       Duration flushTimeout = const Duration(minutes: 5),
       int maxLength,
       OnFlush onFlush}) {
-    _configs[filename] = _QConfig(
+    _configs[filename] = _QueueConfig(
         flushAt: flushAt,
         flushTimeout: flushTimeout,
         maxLength: maxLength ?? flushAt * 5,
@@ -64,7 +64,7 @@ class PersistentQueue {
   final String filename;
 
   static final _cache = <String, PersistentQueue>{};
-  static final _configs = <String, _QConfig>{};
+  static final _configs = <String, _QueueConfig>{};
 
   final QueueBuffer _buffer;
 
@@ -220,8 +220,8 @@ class PersistentQueue {
   }
 }
 
-class _QConfig {
-  _QConfig({this.flushAt, this.flushTimeout, this.maxLength, this.onFlush});
+class _QueueConfig {
+  _QueueConfig({this.flushAt, this.flushTimeout, this.maxLength, this.onFlush});
 
   final int flushAt;
   final Duration flushTimeout;
