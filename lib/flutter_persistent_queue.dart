@@ -80,9 +80,6 @@ class PersistentQueue {
     return _buffer.defer<int>(() => _len);
   }
 
-  /// Queue throws exceptions at [push] time if already at [maxLength] elements.
-  int get maxLength => _configs[filename].maxLength;
-
   /// Flag indicating queue readiness after initial reload event.
   Future<void> get ready => _ready;
 
@@ -129,7 +126,7 @@ class PersistentQueue {
   }
 
   void _checkOverflow() {
-    if (_len + _buffer.length - 1 <= maxLength) {
+    if (_len + _buffer.length - 1 <= _configs[filename].maxLength) {
       return;
     }
 
