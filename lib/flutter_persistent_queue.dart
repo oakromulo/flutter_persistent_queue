@@ -73,37 +73,21 @@ class PersistentQueue {
   int _len = 0;
   Future<void> _ready;
 
-  /// Flag indicating queue readiness after initial reload event.
-  Future<void> get ready => _ready;
-
-  /// Flag indicating actual queue length after buffered operations go through.
+  /// Actual queue length after buffered operations go through.
   Future<int> get length {
     _checkErrorState();
 
     return _buffer.defer<int>(() => _len);
   }
 
-  /// Target number of queued elements that triggers an implicit [flush].
-  int get flushAt => _configs[filename].flushAt;
-
-  /// Target maximum time in queue before an implicit auto [flush].
-  Duration get flushTimeout => _configs[filename].flushTimeout;
-
   /// Queue throws exceptions at [push] time if already at [maxLength] elements.
   int get maxLength => _configs[filename].maxLength;
 
-  /// Optional callback to be implicitly called on each internal [flush].
-  OnFlush get onFlush => _configs[filename].onFlush;
+  /// Flag indicating queue readiness after initial reload event.
+  Future<void> get ready => _ready;
 
-  /// Push an [item] to the end of the [PersistentQueue] after buffer clears.
-  ///
-  /// p.s. [item] must be json encodable, as `json.encode()` is called over it
-  Future<void> push(dynamic item) {
-    _checkOverflow();
-    _checkErrorState();
-
-    return _buffer.defer(() => _push(item));
-  }
+  /// Dispose all queue resources.
+  Future<void> destroy() => _buffer.defer(_destroy);
 
   /// Schedule a flush instruction to happen after current task buffer clears.
   ///
@@ -116,6 +100,16 @@ class PersistentQueue {
     return _buffer.defer(() => _flush(onFlush));
   }
 
+  /// Push an [item] to the end of the [PersistentQueue] after buffer clears.
+  ///
+  /// p.s. [item] must be json encodable, as `json.encode()` is called over it
+  Future<void> push(dynamic item) {
+    _checkOverflow();
+    _checkErrorState();
+
+    return _buffer.defer(() => _push(item));
+  }
+
   /// Preview a [List] of currently buffered items, without any dequeuing.
   Future<List<dynamic>> toList() {
     _checkErrorState();
@@ -123,13 +117,54 @@ class PersistentQueue {
     return _buffer.defer<List<dynamic>>(_toList);
   }
 
-  /// Optionally deallocate all queue resources when called
-  Future<void> destroy() => _buffer.defer(_destroy);
+  bool get _isExpired => _deadline != null && _nowUtc.isAfter(_deadline);
+  DateTime get _nowUtc => DateTime.now().toUtc();
+
+  void _checkErrorState() {
+    if (_errorState == null) {
+      return;
+    }
+
+    throw Exception(_errorState);
+  }
+
+  void _checkOverflow() {
+    if (_len + _buffer.length - 1 <= maxLength) {
+      return;
+    }
+
+    throw Exception('QueueOverflow');
+  }
+
+  Future<void> _destroy() async {
+    await _buffer.destroy();
+
+    _cache.remove(filename);
+    _errorState = Exception('Queue Destroyed');
+  }
+
+  Future<void> _file(_StorageFunc inputFunc) async {
+    final storage = LocalStorage(filename);
+
+    await storage.ready;
+    await inputFunc(storage);
+  }
+
+  Future<void> _flush([OnFlush onFlushParam]) async {
+    final OnFlush _flushFunc =
+        onFlushParam ?? _configs[filename].onFlush ?? (_) => true;
+
+    final bool flushSuccess = (await _flushFunc(await _toList())) ?? false;
+
+    if (flushSuccess) {
+      await _reset();
+    }
+  }
 
   Future<void> _push(dynamic item) async {
     await _write(item);
 
-    if (_len >= flushAt || _expiredTimeout()) {
+    if (_len >= _configs[filename].flushAt || _isExpired) {
       await _flush();
     }
   }
@@ -150,22 +185,16 @@ class PersistentQueue {
     }
   }
 
-  Future<void> _flush([OnFlush onFlushParam]) async {
-    final OnFlush _flushFunc = onFlushParam ?? onFlush ?? (_) => true;
+  Future<void> _reset() async {
+    await _file((LocalStorage storage) async {
+      await storage.clear();
 
-    final bool flushSuccess = (await _flushFunc(await _toList())) ?? false;
-
-    if (flushSuccess) {
-      await _reset();
-    }
+      _len = 0;
+    });
   }
 
-  Future<void> _destroy() async {
-    await _buffer.destroy();
-
-    _cache.remove(filename);
-    _errorState = Exception('Queue Destroyed');
-  }
+  void _resetDeadline() =>
+      _deadline = _nowUtc.add(_configs[filename].flushTimeout);
 
   Future<List<dynamic>> _toList() async {
     if (_len == null || _len < 1) {
@@ -183,14 +212,6 @@ class PersistentQueue {
     return li;
   }
 
-  Future<void> _reset() async {
-    await _file((LocalStorage storage) async {
-      await storage.clear();
-
-      _len = 0;
-    });
-  }
-
   Future<void> _write(dynamic value) async {
     await _file((LocalStorage storage) async {
       await storage.setItem('$_len', value);
@@ -200,34 +221,6 @@ class PersistentQueue {
       }
     });
   }
-
-  Future<void> _file(_StorageFunc inputFunc) async {
-    final storage = LocalStorage(filename);
-
-    await storage.ready;
-    await inputFunc(storage);
-  }
-
-  void _checkErrorState() {
-    if (_errorState == null) {
-      return;
-    }
-
-    throw Exception(_errorState);
-  }
-
-  void _checkOverflow() {
-    if (_len + _buffer.length - 1 <= maxLength) {
-      return;
-    }
-
-    throw Exception('QueueOverflow');
-  }
-
-  void _resetDeadline() => _deadline = _nowUtc().add(flushTimeout);
-  bool _expiredTimeout() => _deadline != null && _nowUtc().isAfter(_deadline);
-
-  DateTime _nowUtc() => DateTime.now().toUtc();
 }
 
 class _QConfig {
