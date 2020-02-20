@@ -1,3 +1,6 @@
+## [6.0.3] - 2020-02-20
+- improve config overriding
+
 ## [6.0.2] - 2020-02-20
 - fix: allow config overrides to match previous v5 behavior
 
