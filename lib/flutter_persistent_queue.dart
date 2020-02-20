@@ -44,7 +44,7 @@ class PersistentQueue {
       int maxLength,
       String nickname,
       OnFlush onFlush}) {
-    final config = _QueueConfig(
+    _configs[filename] = _QueueConfig(
         flushAt: flushAt,
         flushTimeout: flushTimeout,
         maxLength: maxLength ?? flushAt * 5,
@@ -55,10 +55,10 @@ class PersistentQueue {
     }
 
     return _queues[filename] =
-        PersistentQueue._internal(filename, config, nickname ?? filename);
+        PersistentQueue._internal(filename, nickname ?? filename);
   }
 
-  PersistentQueue._internal(this.filename, this._config, this.nickname)
+  PersistentQueue._internal(this.filename, this.nickname)
       : _buffer = QueueBuffer() {
     _ready = _buffer.defer<void>(_reload);
   }
@@ -69,10 +69,10 @@ class PersistentQueue {
   /// Optional queue name/alias for debug purposes, defaults to [filename].
   final String nickname;
 
+  static final _configs = <String, _QueueConfig>{};
   static final _queues = <String, PersistentQueue>{};
 
   final QueueBuffer _buffer;
-  final _QueueConfig _config;
 
   DateTime _deadline;
   Exception _errorState;
@@ -120,6 +120,7 @@ class PersistentQueue {
     return _buffer.defer<List<dynamic>>(_toList);
   }
 
+  _QueueConfig get _config => _configs[filename];
   bool get _isExpired => _deadline != null && _nowUtc.isAfter(_deadline);
   DateTime get _nowUtc => DateTime.now().toUtc();
 
@@ -142,6 +143,7 @@ class PersistentQueue {
   Future<void> _destroy() async {
     await _buffer.destroy();
 
+    _configs.remove(filename);
     _queues.remove(filename);
 
     _errorState = Exception('Queue Destroyed');
