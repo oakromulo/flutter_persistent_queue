@@ -1,3 +1,7 @@
+## [6.0.1] - 2020-02-20
+
+- major refactor to improve maintainability
+
 ## [5.1.1] - 2019-12-26
 
 - updated dependencies
