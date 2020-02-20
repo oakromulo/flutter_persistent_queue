@@ -42,6 +42,7 @@ class PersistentQueue {
       {int flushAt = 100,
       Duration flushTimeout = const Duration(minutes: 5),
       int maxLength,
+      String nickname,
       OnFlush onFlush}) {
     if (_queues.containsKey(filename)) {
       return _queues[filename];
@@ -53,16 +54,20 @@ class PersistentQueue {
         maxLength: maxLength ?? flushAt * 5,
         onFlush: onFlush);
 
-    return _queues[filename] = PersistentQueue._internal(filename, config);
+    return _queues[filename] =
+        PersistentQueue._internal(filename, config, nickname ?? filename);
   }
 
-  PersistentQueue._internal(this.filename, this._config)
+  PersistentQueue._internal(this.filename, this._config, this.nickname)
       : _buffer = QueueBuffer() {
     _ready = _buffer.defer<void>(_reload);
   }
 
   /// Permanent storage extensionless destination filename.
   final String filename;
+
+  /// Optional queue name/alias for debug purposes, defaults to [filename].
+  final String nickname;
 
   static final _queues = <String, PersistentQueue>{};
 
