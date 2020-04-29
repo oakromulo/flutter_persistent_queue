@@ -1,3 +1,6 @@
+## [6.0.4] - 2020-04-29
+- dependency updates
+
 ## [6.0.3] - 2020-02-20
 - improve config overriding
 
