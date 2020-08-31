@@ -175,7 +175,7 @@ class PersistentQueue {
       _errorState = null;
       _len = 0;
 
-      await _file((LocalStorage storage) async {
+      await _file((storage) async {
         while (await storage.getItem('$_len') != null) {
           ++_len;
         }
@@ -186,7 +186,7 @@ class PersistentQueue {
   }
 
   Future<void> _reset() async {
-    await _file((LocalStorage storage) async {
+    await _file((storage) async {
       await storage.clear();
 
       _len = 0;
@@ -202,7 +202,7 @@ class PersistentQueue {
 
     final li = List(_len);
 
-    await _file((LocalStorage storage) async {
+    await _file((storage) async {
       for (int k = 0; k < _len; ++k) {
         li[k] = await storage.getItem('$k');
       }
@@ -212,7 +212,7 @@ class PersistentQueue {
   }
 
   Future<void> _write(dynamic value) async {
-    await _file((LocalStorage storage) async {
+    await _file((storage) async {
       await storage.setItem('$_len', value);
 
       if (++_len == 1) {

@@ -8,6 +8,7 @@ linter:
   rules:
     - always_declare_return_types
     - avoid_slow_async_io
+    - avoid_types_on_closure_parameters
     - avoid_unused_constructor_parameters
     - avoid_void_async
     - await_only_futures
