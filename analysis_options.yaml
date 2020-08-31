@@ -1,7 +1,6 @@
 analyzer:
   strong-mode:
     implicit-casts: false
-    implicit-dynamic: false
   exclude:
     - test/test_driver/**
 
