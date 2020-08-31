@@ -1,3 +1,6 @@
+## [6.1.1+1] - 2020-08-31
+- fix ::clear method interface
+
 ## [6.1.1] - 2020-08-31
 - minor refactor
 

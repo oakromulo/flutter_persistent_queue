@@ -86,7 +86,7 @@ class PersistentQueue {
   Future<void> get ready => _ready;
 
   /// Clear the list and return queued items.
-  Future<void> clear() => _flushWrap(true);
+  Future<List> clear() => _flushWrap(true);
 
   /// Dispose all queue resources.
   Future<void> destroy() => _buffer.defer(_destroy);
