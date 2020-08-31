@@ -1,3 +1,6 @@
+## [6.1.1] - 2020-08-31
+- minor refactor
+
 ## [6.0.4] - 2020-04-29
 - dependency updates
 

@@ -10,9 +10,9 @@
 /// executed sequentially on an isolated event loop per queue.
 library flutter_persistent_queue;
 
-import 'dart:async' show FutureOr;
+import 'dart:async'
+    show Completer, FutureOr, StreamController, StreamSubscription;
 import 'package:localstorage/localstorage.dart' show LocalStorage;
-import './queue_buffer.dart' show QueueBuffer;
 
 /// A [PersistentQueue] stores data via [push] and clears it via [flush] calls.
 class PersistentQueue {
@@ -21,10 +21,10 @@ class PersistentQueue {
   /// [filename] gets instantiated under `ApplicationDocumentsDirectory` to
   /// store/load the persistent queue.
   ///
-  /// An optional [OnFlush] [onFlush] handler can be supplied at construction
+  /// An optional [onFlush] handler can be supplied at construction
   /// time, to be called implicitly before each [flush()] operation emptying
-  /// the queue. When [onFlush] is provided the queue only flushes if the
-  /// handler returns `true`.
+  /// the queue. When [onFlush] is provided the queue will be emptied as long
+  /// as the handler does not return `false`.
   ///
   /// The [flushAt] and [flushTimeout] parameters specify trigger conditions
   /// for firing automatic implicit [flush()] operations.
@@ -43,8 +43,8 @@ class PersistentQueue {
       Duration flushTimeout = const Duration(minutes: 5),
       int maxLength,
       String nickname,
-      OnFlush onFlush}) {
-    _configs[filename] = _QueueConfig(
+      FutureOr Function(List) onFlush}) {
+    _configs[filename] = _Config(
         flushAt: flushAt,
         flushTimeout: flushTimeout,
         maxLength: maxLength ?? flushAt * 5,
@@ -59,8 +59,8 @@ class PersistentQueue {
   }
 
   PersistentQueue._internal(this.filename, this.nickname)
-      : _buffer = QueueBuffer() {
-    _ready = _buffer.defer<void>(_reload);
+      : _buffer = _Buffer() {
+    _ready = _defer(_reload);
   }
 
   /// Permanent storage extensionless destination filename.
@@ -69,10 +69,10 @@ class PersistentQueue {
   /// Optional queue name/alias for debug purposes, defaults to [filename].
   final String nickname;
 
-  static final _configs = <String, _QueueConfig>{};
+  static final _configs = <String, _Config>{};
   static final _queues = <String, PersistentQueue>{};
 
-  final QueueBuffer _buffer;
+  final _Buffer _buffer;
 
   DateTime _deadline;
   Exception _errorState;
@@ -80,96 +80,92 @@ class PersistentQueue {
   Future<void> _ready;
 
   /// Actual queue length after buffered operations go through.
-  Future<int> get length {
-    _checkErrorState();
-
-    return _buffer.defer<int>(() => _len);
-  }
+  Future<int> get length => _defer(() => _len);
 
   /// Flag indicating queue readiness after initial reload event.
   Future<void> get ready => _ready;
+
+  /// Clear the list and return queued items.
+  Future<void> clear() => _flushWrap(true);
 
   /// Dispose all queue resources.
   Future<void> destroy() => _buffer.defer(_destroy);
 
   /// Schedule a flush instruction to happen after current task buffer clears.
   ///
-  /// An optional handler callback [OnFlush] [onFlush] may be provided so that
-  /// the flush operation only clears out if it returns `true`. It holds
-  /// priority over the [onFlush] handler defined at construction time.
-  Future<void> flush([OnFlush onFlush]) {
-    _checkErrorState();
-
-    return _buffer.defer(() => _flush(onFlush));
-  }
+  /// An optional callback [onFlush] may be provided and the queue only gets
+  /// emptied if [onFlush] does not return `false`. It holds priority over the
+  /// also optional onFlush defined at construction time.
+  Future<void> flush([FutureOr Function(List) onFlush]) =>
+      _defer(() => _flush(onFlush));
 
   /// Push an [item] to the end of the [PersistentQueue] after buffer clears.
   ///
   /// p.s. [item] must be json encodable, as `json.encode()` is called over it
-  Future<void> push(dynamic item) {
-    _checkOverflow();
-    _checkErrorState();
-
-    return _buffer.defer(() => _push(item));
-  }
+  Future<void> push(dynamic item) => _defer(() => _push(item));
 
   /// Preview a [List] of currently buffered items, without any dequeuing.
-  Future<List<dynamic>> toList() {
-    _checkErrorState();
+  Future<List> toList() => _flushWrap(false);
 
-    return _buffer.defer<List<dynamic>>(_toList);
-  }
-
-  _QueueConfig get _config => _configs[filename];
+  _Config get _config => _configs[filename];
   bool get _isExpired => _deadline != null && _nowUtc.isAfter(_deadline);
   DateTime get _nowUtc => DateTime.now().toUtc();
 
-  void _checkErrorState() {
-    if (_errorState == null) {
-      return;
+  Future<T> _defer<T>(FutureOr<T> Function() action) {
+    void checkErrorState() {
+      if (_errorState != null) {
+        throw Exception(_errorState);
+      }
     }
 
-    throw Exception(_errorState);
+    checkErrorState();
+
+    return _buffer
+        .defer<T>(() => Future.sync(checkErrorState).then((_) => action()));
   }
 
-  void _checkOverflow() {
-    if (_len + _buffer.length - 1 <= _config.maxLength) {
-      return;
-    }
-
-    throw Exception('QueueOverflow');
-  }
-
-  Future<void> _destroy() async {
-    await _buffer.destroy();
-
+  Future<void> _destroy() {
     _configs.remove(filename);
     _queues.remove(filename);
 
-    _errorState = Exception('Queue Destroyed');
+    _errorState ??= Exception('Queue Destroyed');
+
+    return _buffer.destroy();
   }
 
-  Future<void> _file(_StorageFunc inputFunc) async {
+  Future<void> _file(Future<void> Function(LocalStorage) inputFunc) async {
     final storage = LocalStorage(filename);
 
     await storage.ready;
     await inputFunc(storage);
   }
 
-  Future<void> _flush([OnFlush onFlushParam]) async {
-    final OnFlush onFlush = onFlushParam ?? _config.onFlush ?? (_) => true;
+  Future<void> _flush([FutureOr Function(List) onFlushParam]) async {
+    final onFlush = onFlushParam ?? _config.onFlush ?? (_) => true;
 
-    final bool flushSuccess = (await onFlush(await _toList())) ?? false;
-
-    if (flushSuccess) {
+    if (((await onFlush(await _toList())) ?? true) != false) {
       await _reset();
     }
   }
 
+  Future<List> _flushWrap(bool shouldClear) {
+    List list;
+
+    return flush((_list) {
+      list = _list;
+
+      return shouldClear;
+    }).then((_) => list);
+  }
+
   Future<void> _push(dynamic item) async {
+    if (_len > _config.maxLength) {
+      throw Exception('QueueOverflow');
+    }
+
     await _write(item);
 
-    if (_len >= _config.flushAt || _isExpired) {
+    if ((_len >= _config.flushAt) || _isExpired) {
       await _flush();
     }
   }
@@ -179,7 +175,7 @@ class PersistentQueue {
       _errorState = null;
       _len = 0;
 
-      await _file((LocalStorage storage) async {
+      await _file((storage) async {
         while (await storage.getItem('$_len') != null) {
           ++_len;
         }
@@ -190,7 +186,7 @@ class PersistentQueue {
   }
 
   Future<void> _reset() async {
-    await _file((LocalStorage storage) async {
+    await _file((storage) async {
       await storage.clear();
 
       _len = 0;
@@ -199,14 +195,14 @@ class PersistentQueue {
 
   void _resetDeadline() => _deadline = _nowUtc.add(_config.flushTimeout);
 
-  Future<List<dynamic>> _toList() async {
-    if (_len == null || _len < 1) {
-      return <dynamic>[];
+  Future<List> _toList() async {
+    if ((_len ?? 0) < 1) {
+      return [];
     }
 
-    final li = List<dynamic>(_len);
+    final li = List(_len);
 
-    await _file((LocalStorage storage) async {
+    await _file((storage) async {
       for (int k = 0; k < _len; ++k) {
         li[k] = await storage.getItem('$k');
       }
@@ -216,7 +212,7 @@ class PersistentQueue {
   }
 
   Future<void> _write(dynamic value) async {
-    await _file((LocalStorage storage) async {
+    await _file((storage) async {
       await storage.setItem('$_len', value);
 
       if (++_len == 1) {
@@ -226,16 +222,53 @@ class PersistentQueue {
   }
 }
 
-class _QueueConfig {
-  _QueueConfig({this.flushAt, this.flushTimeout, this.maxLength, this.onFlush});
+class _Buffer {
+  _Buffer() {
+    _sub = _controller.stream.listen((action) => _sub.pause(action.run()));
+  }
+
+  final _controller = StreamController<_BufferItem>();
+  StreamSubscription<_BufferItem> _sub;
+
+  Future<T> defer<T>(FutureOr<T> Function() action) {
+    final item = _BufferItem(action);
+
+    _controller.add(item);
+
+    return item.future;
+  }
+
+  Future<void> destroy() => _sub.cancel().then((_) => _controller.close());
+}
+
+class _BufferItem<T> {
+  _BufferItem(this._handler);
+
+  final _completer = Completer<T>();
+  final FutureOr<T> Function() _handler;
+
+  Future<T> get future => _completer.future;
+
+  Future<T> run() async {
+    try {
+      final res = await Future.sync(_handler);
+
+      _completer.complete(res);
+
+      return res;
+    } catch (e, s) {
+      _completer.completeError(e, s);
+
+      return null;
+    }
+  }
+}
+
+class _Config {
+  _Config({this.flushAt, this.flushTimeout, this.maxLength, this.onFlush});
 
   final int flushAt;
   final Duration flushTimeout;
   final int maxLength;
-  final OnFlush onFlush;
+  final FutureOr Function(List) onFlush;
 }
-
-/// A spec for optional queue iteration prior to a [PersistentQueue.flush()].
-typedef OnFlush = FutureOr<bool> Function(List<dynamic>);
-
-typedef _StorageFunc = Future<void> Function(LocalStorage);
