@@ -8,8 +8,7 @@ repository: https://github.com/oakromulo/flutter_persistent_queue.git
 issue_tracker: https://github.com/oakromulo/flutter_persistent_queue/issues
 
 environment:
-  flutter: ">=1.12.13+hotfix.5"
-  sdk: ">=2.7.0"
+  sdk: ">=2.12.0 <3.0.0"
 
 dependencies:
   flutter:
