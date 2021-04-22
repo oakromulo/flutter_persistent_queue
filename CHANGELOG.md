@@ -1,3 +1,6 @@
+## [6.2.0] - 2021-04-22
+- dependency updates
+
 ## [6.1.1+1] - 2020-08-31
 - fix ::clear method interface
 
