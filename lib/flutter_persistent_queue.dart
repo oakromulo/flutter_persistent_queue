@@ -41,17 +41,18 @@ class PersistentQueue {
   factory PersistentQueue(String filename,
       {int flushAt = 100,
       Duration flushTimeout = const Duration(minutes: 5),
-      int maxLength,
-      String nickname,
-      FutureOr Function(List) onFlush}) {
+      int? maxLength,
+      String? nickname,
+      FutureOr Function(List)? onFlush}) {
     _configs[filename] = _Config(
         flushAt: flushAt,
         flushTimeout: flushTimeout,
         maxLength: maxLength ?? flushAt * 5,
         onFlush: onFlush);
 
-    if (_queues.containsKey(filename)) {
-      return _queues[filename];
+    final queue = _queues[filename];
+    if (queue != null) {
+      return queue;
     }
 
     return _queues[filename] =
@@ -74,10 +75,10 @@ class PersistentQueue {
 
   final _Buffer _buffer;
 
-  DateTime _deadline;
-  Exception _errorState;
+  DateTime? _deadline;
+  Exception? _errorState;
   int _len = 0;
-  Future<void> _ready;
+  late Future<void> _ready;
 
   /// Actual queue length after buffered operations go through.
   Future<int> get length => _defer(() => _len);
@@ -96,7 +97,7 @@ class PersistentQueue {
   /// An optional callback [onFlush] may be provided and the queue only gets
   /// emptied if [onFlush] does not return `false`. It holds priority over the
   /// also optional onFlush defined at construction time.
-  Future<void> flush([FutureOr Function(List) onFlush]) =>
+  Future<void> flush([FutureOr Function(List)? onFlush]) =>
       _defer(() => _flush(onFlush));
 
   /// Push an [item] to the end of the [PersistentQueue] after buffer clears.
@@ -107,8 +108,12 @@ class PersistentQueue {
   /// Preview a [List] of currently buffered items, without any dequeuing.
   Future<List> toList() => _flushWrap(false);
 
-  _Config get _config => _configs[filename];
-  bool get _isExpired => _deadline != null && _nowUtc.isAfter(_deadline);
+  _Config get _config => _configs[filename]!;
+  bool get _isExpired {
+    final deadline = _deadline;
+    return deadline != null && _nowUtc.isAfter(deadline);
+  }
+
   DateTime get _nowUtc => DateTime.now().toUtc();
 
   Future<T> _defer<T>(FutureOr<T> Function() action) {
@@ -140,7 +145,7 @@ class PersistentQueue {
     await inputFunc(storage);
   }
 
-  Future<void> _flush([FutureOr Function(List) onFlushParam]) async {
+  Future<void> _flush([FutureOr Function(List)? onFlushParam]) async {
     final onFlush = onFlushParam ?? _config.onFlush ?? (_) => true;
 
     if (((await onFlush(await _toList())) ?? true) != false) {
@@ -149,7 +154,7 @@ class PersistentQueue {
   }
 
   Future<List> _flushWrap(bool shouldClear) {
-    List list;
+    late List list;
 
     return flush((_list) {
       list = _list;
@@ -196,11 +201,11 @@ class PersistentQueue {
   void _resetDeadline() => _deadline = _nowUtc.add(_config.flushTimeout);
 
   Future<List> _toList() async {
-    if ((_len ?? 0) < 1) {
+    if ((_len) < 1) {
       return [];
     }
 
-    final li = List(_len);
+    final li = List<dynamic>.filled(_len, Object());
 
     await _file((storage) async {
       for (int k = 0; k < _len; ++k) {
@@ -228,7 +233,7 @@ class _Buffer {
   }
 
   final _controller = StreamController<_BufferItem>();
-  StreamSubscription<_BufferItem> _sub;
+  late StreamSubscription<_BufferItem> _sub;
 
   Future<T> defer<T>(FutureOr<T> Function() action) {
     final item = _BufferItem(action);
@@ -249,7 +254,7 @@ class _BufferItem<T> {
 
   Future<T> get future => _completer.future;
 
-  Future<T> run() async {
+  Future<T?> run() async {
     try {
       final res = await Future.sync(_handler);
 
@@ -265,10 +270,14 @@ class _BufferItem<T> {
 }
 
 class _Config {
-  _Config({this.flushAt, this.flushTimeout, this.maxLength, this.onFlush});
+  _Config(
+      {required this.flushAt,
+      required this.flushTimeout,
+      required this.maxLength,
+      required this.onFlush});
 
   final int flushAt;
   final Duration flushTimeout;
   final int maxLength;
-  final FutureOr Function(List) onFlush;
+  final FutureOr Function(List)? onFlush;
 }
